@@ -1,0 +1,2999 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef6f7">
+  <title>CareFind AI | Hospital, Doctor, OPD, IPD & Appointment Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root {
+      --ink: #123142;
+      --ink-soft: #355264;
+      --muted: #5d7686;
+      --blue: #226ad4;
+      --blue-dark: #1954ad;
+      --teal: #0b8d84;
+      --teal-dark: #086e67;
+      --mint: #e8f6f4;
+      --line: #dde8ec;
+      --line-strong: #c5d7de;
+      --paper: #ffffff;
+      --wash: #f4f8fa;
+      --red: #c93b47;
+      --amber: #b36b0e;
+      --green: #148453;
+      --shadow: 0 12px 32px rgba(18, 49, 66, 0.06);
+      --radius: 14px;
+      --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --font-body: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: var(--wash); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--wash);
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4, .brand, .topbar-title { font-family: var(--font-display); text-wrap: balance; }
+    .mono, .stat-value, table td, .slot-btn, .code-text { font-variant-numeric: tabular-nums; }
+    .code-text { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+    }
+    a { color: inherit; }
+    .hidden { display: none !important; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12.5px; }
+    .kicker {
+      display: block;
+      color: var(--teal);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      margin-bottom: 4px;
+    }
+
+    /* Subtle clinical mesh backdrop for Auth screen (no external broken images) */
+    .auth-screen {
+      position: relative;
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(380px, 500px);
+      background:
+        radial-gradient(ellipse at 12% 16%, rgba(11, 141, 132, 0.14), transparent 48%),
+        radial-gradient(ellipse at 86% 82%, rgba(34, 106, 212, 0.12), transparent 52%),
+        linear-gradient(135deg, #f3f9fa 0%, #eef5f8 55%, #f8fbfc 100%);
+    }
+    .auth-hero {
+      padding: clamp(32px, 6vw, 72px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-right: 1px solid var(--line);
+    }
+    .auth-hero-copy { max-width: 560px; margin: auto 0; padding: 32px 0; }
+    .auth-hero-copy h1 {
+      font-size: clamp(32px, 4vw, 48px);
+      line-height: 1.1;
+      letter-spacing: -0.035em;
+      margin: 10px 0 18px;
+      color: var(--ink);
+    }
+    .auth-hero-copy p { font-size: 15.5px; color: var(--ink-soft); line-height: 1.65; margin: 0 0 24px; }
+    .feature-strip {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 22px;
+    }
+    .feature-strip div strong { display: block; font-size: 13.5px; color: var(--ink); margin-bottom: 3px; }
+    .feature-strip div span { font-size: 12.5px; color: var(--muted); }
+    .auth-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+    .auth-box {
+      width: min(100%, 420px);
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -0.025em; font-size: 19px; color: var(--ink); }
+    .brand-mark {
+      width: 38px; height: 38px; display: grid; place-items: center;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--teal), var(--blue));
+      color: #fff; font-size: 18px; flex: none;
+    }
+    .auth-topline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .auth-box h2 { font-size: 24px; letter-spacing: -0.03em; margin: 4px 0 6px; }
+    .auth-subtitle { margin: 0 0 18px; color: var(--muted); font-size: 13.5px; }
+    .role-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .role-choice {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px;
+      background: var(--wash); color: var(--ink-soft); text-align: left;
+      transition: border-color 0.16s, background 0.16s;
+    }
+    .role-choice strong { display: block; font-size: 12.5px; color: var(--ink); }
+    .role-choice small { display: block; font-size: 11px; color: var(--muted); }
+    .role-choice.active { border-color: var(--teal); background: var(--mint); }
+    .hospital-role-link {
+      display: inline-block; margin: 2px 0 12px; padding: 2px 0; border: 0;
+      background: transparent; color: var(--muted); font-size: 12.5px;
+    }
+    .hospital-role-link span { color: var(--blue); font-weight: 600; }
+    .hospital-role-link.active span { color: var(--teal-dark); text-decoration: underline; }
+
+    /* Form Controls */
+    .field { display: grid; gap: 5px; margin: 11px 0; }
+    .field label { color: var(--ink-soft); font-size: 12px; font-weight: 600; }
+    .field input, .field select, .field textarea {
+      width: 100%; border: 1px solid var(--line-strong); background: #fff;
+      border-radius: 9px; padding: 9.5px 12px; color: var(--ink); outline: 0;
+      min-height: 40px; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field textarea { resize: vertical; min-height: 78px; }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px rgba(34, 106, 212, 0.12);
+    }
+    .password-wrap { position: relative; display: flex; }
+    .password-wrap input { padding-right: 60px; }
+    .password-toggle {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      border: 0; background: transparent; color: var(--muted); font-size: 12px; font-weight: 600;
+      padding: 6px 8px; border-radius: 6px;
+    }
+    .password-toggle:hover { background: var(--wash); color: var(--ink); }
+
+    /* Buttons */
+    .btn {
+      border: 1px solid transparent; border-radius: 9px;
+      padding: 9px 16px; min-height: 38px;
+      font-weight: 600; font-size: 13px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      white-space: nowrap; flex-shrink: 0; text-decoration: none;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.52; cursor: not-allowed; }
+    .btn-primary { color: #fff; background: var(--blue); }
+    .btn-primary:hover:not(:disabled) { background: var(--blue-dark); }
+    .btn-teal { color: #fff; background: var(--teal); }
+    .btn-teal:hover:not(:disabled) { background: var(--teal-dark); }
+    .btn-light { color: var(--ink); background: #fff; border-color: var(--line-strong); }
+    .btn-light:hover:not(:disabled) { background: var(--wash); }
+    .btn-danger { color: var(--red); background: #fff4f5; border-color: #f3c8cc; }
+    .btn-danger:hover:not(:disabled) { background: #ffe7e9; }
+    .btn-quiet { color: var(--blue); background: transparent; padding: 6px 10px; min-height: 32px; }
+    .btn-quiet:hover:not(:disabled) { background: #edf4ff; }
+    .btn-small { font-size: 12px; padding: 6px 12px; min-height: 32px; border-radius: 8px; }
+    .btn-block { width: 100%; min-height: 42px; }
+
+    /* Alerts */
+    .alert {
+      padding: 12px 14px; border-radius: 10px;
+      background: #eef5fd; color: #1f4f85; border: 1px solid #d3e5fa;
+      font-size: 13px; line-height: 1.5;
+    }
+    .alert-warning { color: #7a450b; background: #fff7eb; border-color: #f4d8ad; }
+    .alert-danger { color: #8c222d; background: #fff1f2; border-color: #f4c6cb; }
+    .alert-success { color: #115e3a; background: #ecf9f2; border-color: #bce6cf; }
+    .demo-note { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 12px; }
+    .demo-note summary { cursor: pointer; font-weight: 600; color: var(--ink-soft); }
+
+    /* App Shell */
+    .app-shell { display: grid; grid-template-columns: 254px minmax(0, 1fr); min-height: 100vh; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh; overflow-y: auto;
+      padding: 20px 14px; background: var(--paper); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column; z-index: 15;
+    }
+    .sidebar .brand { padding: 4px 10px 20px; font-size: 18px; }
+    .side-label {
+      margin: 8px 10px 8px; color: var(--muted); font-size: 11px;
+      font-weight: 700; letter-spacing: 0.03em;
+    }
+    .nav-list { display: grid; gap: 3px; }
+    .nav-item {
+      width: 100%; border: 0; background: transparent; color: var(--ink-soft);
+      text-align: left; padding: 9.5px 12px; border-radius: 9px;
+      font-size: 13.5px; font-weight: 500;
+      display: flex; align-items: center; gap: 10px; white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover { background: var(--wash); color: var(--ink); }
+    .nav-item.active { background: #ebf3fe; color: var(--blue); font-weight: 700; }
+    .nav-icon { width: 18px; text-align: center; font-size: 14px; opacity: 0.85; }
+    .sidebar-bottom { margin-top: auto; padding: 14px 8px 4px; border-top: 1px solid var(--line); }
+    .mini-profile { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .avatar {
+      width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px;
+      background: var(--mint); color: var(--teal-dark); font-weight: 700; font-size: 13px; flex: none;
+    }
+    .mini-profile strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 148px; font-size: 13px; }
+    .mini-profile .muted { font-size: 11.5px; }
+
+    /* Topbar & Main Content */
+    .main { min-width: 0; display: flex; flex-direction: column; }
+    .topbar {
+      height: 64px; padding: 0 clamp(18px, 3.5vw, 40px);
+      background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-title { font-weight: 700; font-size: 15.5px; white-space: nowrap; }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .location-text {
+      color: var(--ink-soft); font-size: 12.5px; font-weight: 500;
+      max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .lang-toggle {
+      border: 1px solid var(--line-strong); border-radius: 8px;
+      background: #fff; color: var(--ink); padding: 6px 11px;
+      font-size: 12px; font-weight: 600; white-space: nowrap;
+    }
+    .content { width: 100%; max-width: 1320px; margin: 0 auto; padding: clamp(20px, 3vw, 34px); flex: 1; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; }
+    .page-head h1 { font-size: clamp(24px, 2.8vw, 30px); letter-spacing: -0.03em; margin: 0 0 4px; }
+    .page-head p { color: var(--muted); margin: 0; max-width: 68ch; font-size: 14px; }
+
+    /* Grids & Cards (Single Elevation, Clean Hairline Borders) */
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card {
+      background: var(--paper); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 20px; min-width: 0;
+    }
+    .card h2 { font-size: 17px; margin: 0 0 8px; letter-spacing: -0.02em; }
+    .card h3 { font-size: 15px; margin: 0 0 6px; letter-spacing: -0.015em; }
+    .card p { margin: 0 0 10px; line-height: 1.55; }
+    .card p:last-child { margin-bottom: 0; }
+    .stat-card { padding: 16px 18px; }
+    .stat-value { font-size: 25px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); line-height: 1.15; }
+    .stat-label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 26px 0 12px; flex-wrap: wrap; }
+    .section-title h2 { font-size: 17.5px; margin: 0; letter-spacing: -0.02em; }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .row-between { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .stack { display: grid; gap: 12px; }
+    .divider-list > * { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .divider-list > *:last-child { border-bottom: 0; padding-bottom: 0; }
+
+    /* Clean Unboxed Metadata & Semantic States (Zero-Pill Discipline) */
+    .meta-line {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+      font-size: 12.5px; color: var(--muted); margin: 4px 0;
+    }
+    .meta-sep { color: var(--line-strong); }
+    .state-ok { color: var(--green); font-weight: 700; }
+    .state-warn { color: var(--amber); font-weight: 700; }
+    .state-bad { color: var(--red); font-weight: 700; }
+    .state-info { color: var(--blue); font-weight: 700; }
+    .demo-label { color: #8c5209; font-weight: 700; font-size: 12px; }
+
+    /* Interactive Segmented Controls & Quick Disease Buttons */
+    .seg-bar { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px; background: var(--wash); border: 1px solid var(--line); border-radius: 10px; width: fit-content; max-width: 100%; }
+    .seg-btn {
+      border: 0; background: transparent; color: var(--ink-soft);
+      padding: 7px 12px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .seg-btn.active { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(18, 49, 66, 0.08); }
+
+    .disease-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+    .disease-tile {
+      border: 1px solid var(--line); background: #fff; border-radius: 11px;
+      padding: 12px 14px; text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .disease-tile:hover { border-color: var(--teal); background: #f8fdfc; }
+    .disease-tile strong { display: block; font-size: 13.5px; color: var(--ink); margin-bottom: 3px; }
+    .disease-tile span { display: block; font-size: 12px; color: var(--teal-dark); font-weight: 600; }
+
+    /* Time Slot Picker */
+    .slot-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .slot-btn {
+      border: 1px solid var(--line-strong); background: #fff; color: var(--ink);
+      border-radius: 8px; padding: 8px 13px; font-size: 13px; font-weight: 600;
+      min-width: 78px; text-align: center;
+      transition: border-color 0.14s, background 0.14s, color 0.14s;
+    }
+    .slot-btn:hover:not(:disabled) { border-color: var(--teal); background: var(--mint); color: var(--teal-dark); }
+    .slot-btn.selected { border-color: var(--blue); background: var(--blue); color: #fff; }
+    .slot-btn.booked, .slot-btn:disabled {
+      background: #f3f6f8; color: #96a8b4; border-color: #e3ebef;
+      text-decoration: line-through; cursor: not-allowed;
+    }
+
+    /* Bed Grid */
+    .bed-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+    .bed-col { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--wash); }
+    .bed-col .bed-name { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+    .bed-col .bed-num { font-size: 20px; font-weight: 800; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+
+    /* Location, Symptoms, Map, Hospitals, Doctors */
+    .location-panel {
+      display: flex; align-items: flex-end; gap: 10px; padding: 12px 14px;
+      border: 1px solid var(--line); border-radius: 11px; background: var(--wash); margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    .location-panel .field { flex: 1; min-width: 200px; margin: 0; }
+    .symptom-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .symptom-option {
+      display: flex; gap: 8px; align-items: center; border: 1px solid var(--line);
+      border-radius: 9px; padding: 9px 10px; color: var(--ink-soft); font-size: 12.5px; cursor: pointer;
+    }
+    .symptom-option:has(input:checked) { border-color: var(--blue); background: #eff5fe; color: var(--blue-dark); }
+    .symptom-option input { accent-color: var(--blue); }
+    #map { width: 100%; height: 370px; border-radius: 11px; border: 1px solid var(--line); z-index: 1; }
+    .hospital-card {
+      display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 14px;
+      padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff;
+    }
+    .hospital-image {
+      min-height: 88px; border-radius: 10px; background: var(--mint);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: var(--teal-dark); text-align: center; overflow: hidden; font-size: 12px; padding: 6px;
+    }
+    .hospital-image img { width: 100%; height: 100%; min-height: 88px; object-fit: cover; }
+    .hospital-actions {
+      grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 12px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .match-meter { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+    .meter { height: 6px; max-width: 150px; flex: 1; background: #e8eff2; border-radius: 99px; overflow: hidden; }
+    .meter i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--teal), var(--blue)); }
+    .doctor-card {
+      display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: start;
+      padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #fff;
+    }
+    .doctor-photo {
+      width: 44px; height: 44px; border-radius: 10px; object-fit: cover;
+      background: var(--mint); display: grid; place-items: center;
+      color: var(--teal-dark); font-size: 14px; font-weight: 700;
+    }
+    .doctor-info h4 { margin: 0 0 3px; font-size: 14.5px; }
+    .doctor-controls {
+      grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 10px;
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    }
+    .doctor-controls select { padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line-strong); background: #fff; }
+
+    /* Tables */
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; min-width: 660px; font-size: 13px; }
+    th {
+      color: var(--muted); text-align: left; font-size: 11.5px; font-weight: 700;
+      padding: 10px 10px; border-bottom: 1px solid var(--line-strong); white-space: nowrap;
+    }
+    td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--ink-soft); }
+    tbody tr:hover { background: #f9fcfd; }
+    .empty { padding: 28px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line-strong); border-radius: 12px; background: #fbfdfe; }
+
+    /* Toast & Modal */
+    .toast-host { position: fixed; right: 20px; top: 76px; z-index: 40; display: grid; gap: 8px; }
+    .toast { background: #14364a; color: #fff; padding: 11px 15px; border-radius: 10px; box-shadow: 0 8px 24px rgba(18, 49, 66, 0.22); max-width: 360px; font-size: 13px; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(11, 31, 46, 0.54); z-index: 50; display: grid; place-items: center; padding: 18px; }
+    .modal { max-width: 620px; width: 100%; max-height: 88vh; overflow: auto; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 24px 64px rgba(11, 31, 46, 0.28); }
+    .modal-close { float: right; border: 1px solid var(--line); background: var(--wash); width: 32px; height: 32px; border-radius: 8px; font-size: 16px; }
+    .mobile-menu { display: none; }
+    footer { color: var(--muted); text-align: center; font-size: 11.5px; padding: 18px 16px; border-top: 1px solid var(--line); background: #fff; }
+    body.large-text { font-size: 16px; }
+    body.large-text .small { font-size: 14px; }
+    body.high-contrast { --ink: #07202e; --ink-soft: #173647; --muted: #2d4c5c; --line: #9ab2be; --line-strong: #6d8c9c; --wash: #ffffff; --blue: #124eab; }
+
+    @media (max-width: 1080px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 820px) {
+      .auth-screen { grid-template-columns: 1fr; }
+      .auth-hero { border-right: 0; border-bottom: 1px solid var(--line); padding: 28px 20px; }
+      .feature-strip { grid-template-columns: 1fr; }
+      .app-shell { display: block; }
+      .sidebar { position: fixed; left: -270px; top: 0; width: 254px; transition: left 0.2s; box-shadow: var(--shadow); }
+      .sidebar.open { left: 0; }
+      .mobile-menu { display: inline-flex; }
+      .topbar { height: 58px; padding: 0 14px; }
+      .location-text { display: none; }
+      .content { padding: 18px 14px; }
+      .grid-2, .grid-3, .grid-4, .bed-metrics { grid-template-columns: 1fr; }
+      .symptom-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .hospital-card { grid-template-columns: 1fr; }
+      #map { height: 290px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-hero">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">+</span>
+        <span>CareFind AI</span>
+      </div>
+      <div class="auth-hero-copy">
+        <span class="kicker">Hospital, Doctor, OPD & IPD Care Platform</span>
+        <h1>Find the right specialist, check real OPD slots, and track IPD beds.</h1>
+        <p>Search hospitals by location, symptoms, or disease, verify doctor availability for a specific hospital and date, book OPD appointments with unique confirmation IDs, and request IPD beds in one unified workspace.</p>
+        <div class="feature-strip">
+          <div>
+            <strong>Disease & Symptom Guidance</strong>
+            <span>Matches health concerns to the right specialist department without making a diagnosis.</span>
+          </div>
+          <div>
+            <strong>Hospital-Specific Slot Checks</strong>
+            <span>Checks real schedules and remaining OPD slots per hospital, doctor, and date.</span>
+          </div>
+          <div>
+            <strong>OPD & IPD Management</strong>
+            <span>Book OPD appointments with double-booking protection and monitor General, Private, and ICU beds.</span>
+          </div>
+          <div>
+            <strong>Verified & Transparent Data</strong>
+            <span>Real facilities and demo records are clearly labeled; unavailable doctors are never shown as bookable.</span>
+          </div>
+        </div>
+      </div>
+      <div class="small muted">Academic Healthcare Platform · Informational guidance only, not a clinical diagnosis tool.</div>
+    </div>
+
+    <div class="auth-panel">
+      <div class="auth-box">
+        <div class="auth-topline">
+          <span id="authEyebrow" class="kicker" style="margin:0">Patient Portal</span>
+          <button id="authLanguageToggle" class="lang-toggle" type="button" aria-label="Change language">ಕನ್ನಡ</button>
+        </div>
+        <h2 id="authHeading">Welcome back</h2>
+        <p id="authSub" class="auth-subtitle">Sign in to access hospitals, OPD slots, and IPD services.</p>
+
+        <div id="roleSelector" class="role-selector" aria-label="Choose account type">
+          <button class="role-choice active" type="button" data-auth-role="patient" aria-pressed="true">
+            <span><strong>Patient</strong><small>Book OPD & IPD</small></span>
+          </button>
+          <button class="role-choice" type="button" data-auth-role="admin" aria-pressed="false">
+            <span><strong>Admin</strong><small>Manage system</small></span>
+          </button>
+        </div>
+        <button id="hospitalRoleLink" class="hospital-role-link" type="button">Hospital staff? <span>Sign in to hospital workspace</span></button>
+
+        <div id="authError" class="alert alert-danger hidden" role="alert" style="margin-bottom:12px"></div>
+        <form id="authForm" novalidate>
+          <div id="nameField" class="field hidden"><label for="fullName">Full name</label><input id="fullName" name="full_name" autocomplete="name" maxlength="100" placeholder="Your full name"></div>
+          <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="username" required maxlength="180" placeholder="you@example.com"></div>
+          <div id="phoneField" class="field hidden"><label for="phone">Phone number</label><input id="phone" name="phone" type="tel" autocomplete="tel" maxlength="20" pattern="[+()0-9 .-]{7,20}" placeholder="+91 98765 43210"></div>
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+              <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="128" placeholder="Enter your password">
+              <button id="togglePassword" class="password-toggle" type="button" aria-label="Show password">Show</button>
+            </div>
+          </div>
+          <div id="confirmField" class="field hidden"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" name="confirm_password" type="password" autocomplete="new-password" maxlength="128" placeholder="Re-enter your password"></div>
+          <button id="authSubmit" class="btn btn-primary btn-block" type="submit" style="margin-top:12px"><span id="authSubmitLabel">Sign in</span></button>
+        </form>
+
+        <div class="row" style="justify-content:center;margin-top:12px;font-size:12.5px">
+          <span id="authSwitchText" class="muted">New to CareFind AI?</span>
+          <button id="authSwitchButton" class="btn btn-quiet btn-small" type="button">Create patient account</button>
+        </div>
+
+        <details class="demo-note muted">
+          <summary>Demo accounts (click to view)</summary>
+          <p style="margin:8px 0 4px">
+            <strong>Patient:</strong> patient@example.com / Patient123!<br>
+            <strong>Hospital:</strong> hospital@example.com / Hospital123!<br>
+            <strong>Admin:</strong> admin@example.com / Admin123!
+          </p>
+          <div class="small">Sample hospitals, doctors, and IPD bed counts are clearly labeled as Demo Data.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="brand"><span class="brand-mark">+</span><span>CareFind AI</span></div>
+      <div id="roleLabel" class="side-label">Patient workspace</div>
+      <nav id="navList" class="nav-list" aria-label="Main navigation"></nav>
+      <div class="sidebar-bottom">
+        <div class="mini-profile">
+          <div id="userAvatar" class="avatar">P</div>
+          <div style="min-width:0">
+            <strong id="userName">Patient</strong>
+            <div id="userRole" class="muted">Patient</div>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-light btn-small" style="width:100%;margin-top:12px">Sign out</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="row">
+          <button id="menuBtn" class="btn btn-light btn-small mobile-menu" aria-label="Open menu">Menu</button>
+          <span id="topTitle" class="topbar-title">Overview</span>
+        </div>
+        <div class="topbar-actions">
+          <span id="locationChip" class="location-text hidden">Location not set</span>
+          <button id="languageToggle" class="lang-toggle" type="button" aria-label="Change language">ಕನ್ನಡ</button>
+        </div>
+      </header>
+      <div id="pageContent" class="content"></div>
+      <footer>CareFind AI is an academic healthcare discovery and booking project, not a clinical diagnostic tool. Disease and symptom suggestions are for guidance only. In a medical emergency, contact local emergency services immediately.</footer>
+    </main>
+  </div>
+
+  <div id="toastHost" class="toast-host" aria-live="polite"></div>
+  <div id="modalHost"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+  (() => {
+    "use strict";
+    const $ = (sel, root = document) => root.querySelector(sel);
+    const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+    const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+    const state = {
+      user: null,
+      csrf: "",
+      page: "overview",
+      location: null,
+      hospitals: [],
+      directory: [],
+      diseases: [],
+      specialist: "",
+      map: null,
+      markers: null,
+      routeLayer: null,
+      compare: new Set(),
+      language: localStorage.getItem("carepath-language") || "en",
+      updateTimer: null,
+      doctorSince: "",
+      profile: null,
+      hospitalData: null,
+      adminData: null,
+      bookingPrefill: null,
+    };
+
+    let authRole = "patient";
+    let authRegisterMode = false;
+    const accessibility = {
+      largeText: localStorage.getItem("carepath-large-text") === "true",
+      highContrast: localStorage.getItem("carepath-high-contrast") === "true",
+    };
+
+    const translations = {
+      en: {
+        overview: "Overview", findCare: "Find hospital & map", diseaseSearch: "Disease search",
+        opdBooking: "OPD & booking", ipdBeds: "IPD & beds", smartSearch: "Smart search",
+        appointments: "My appointments", health: "My health", feedback: "Feedback",
+        profile: "Hospital profile", doctors: "Doctors & schedules", requests: "Appointments",
+        ipdManage: "IPD & admissions", verification: "Hospitals", adminDoctors: "Doctors & schedules",
+        adminAppointments: "Appointments", adminIpd: "IPD & admissions", users: "Accounts",
+        reports: "Reports", dashboard: "Admin dashboard",
+        patientSpace: "Patient workspace", hospitalSpace: "Hospital workspace", adminSpace: "Admin workspace",
+        welcome: "Welcome back", findTitle: "Find hospitals & map", symptomsTitle: "Symptom checker",
+        searchCare: "Find recommended care", location: "Your location", signOut: "Sign out",
+        fullName: "Full name", email: "Email address", password: "Password",
+        createYourAccount: "Create patient account", privateAccount: "Create your account to book OPD and IPD care.",
+        signInPrompt: "Sign in to access hospitals, OPD slots, and IPD services.", createAccountAction: "Create account",
+      },
+      kn: {
+        overview: "ಮುನ್ನೋಟ", findCare: "ಆಸ್ಪತ್ರೆ ಮತ್ತು ನಕ್ಷೆ", diseaseSearch: "ರೋಗ ಆಧಾರಿತ ಹುಡುಕಾಟ",
+        opdBooking: "OPD ಮತ್ತು ಬುಕಿಂಗ್", ipdBeds: "IPD ಮತ್ತು ಹಾಸಿಗೆಗಳು", smartSearch: "ಸ್ಮಾರ್ಟ್ ಹುಡುಕಾಟ",
+        appointments: "ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್‌ಗಳು", health: "ನನ್ನ ಆರೋಗ್ಯ", feedback: "ಪ್ರತಿಕ್ರಿಯೆ",
+        profile: "ಆಸ್ಪತ್ರೆ ಪ್ರೊಫೈಲ್", doctors: "ವೈದ್ಯರು ಮತ್ತು ವೇಳಾಪಟ್ಟಿ", requests: "ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್‌ಗಳು",
+        ipdManage: "IPD ಮತ್ತು ದಾಖಲಾತಿ", verification: "ಆಸ್ಪತ್ರೆಗಳು", adminDoctors: "ವೈದ್ಯರು ಮತ್ತು ವೇಳಾಪಟ್ಟಿ",
+        adminAppointments: "ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್‌ಗಳು", adminIpd: "IPD ಮತ್ತು ದಾಖಲಾತಿ", users: "ಖಾತೆಗಳು",
+        reports: "ವರದಿಗಳು", dashboard: "ನಿರ್ವಾಹಕ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+        patientSpace: "ರೋಗಿ ಕಾರ್ಯಸ್ಥಳ", hospitalSpace: "ಆಸ್ಪತ್ರೆ ಕಾರ್ಯಸ್ಥಳ", adminSpace: "ನಿರ್ವಾಹಕ ಕಾರ್ಯಸ್ಥಳ",
+        welcome: "ಮರಳಿ ಸ್ವಾಗತ", findTitle: "ನಿಮ್ಮ ಹತ್ತಿರದ ಆಸ್ಪತ್ರೆ ಹುಡುಕಿ", symptomsTitle: "ಲಕ್ಷಣಗಳ ಪರಿಶೀಲನೆ",
+        searchCare: "ಶಿಫಾರಸು ಮಾಡಿದ ಆರೈಕೆ ಹುಡುಕಿ", location: "ನಿಮ್ಮ ಸ್ಥಳ", signOut: "ನಿರ್ಗಮಿಸಿ",
+        fullName: "ಪೂರ್ಣ ಹೆಸರು", email: "ಇಮೇಲ್ ವಿಳಾಸ", password: "ಪಾಸ್‌ವರ್ಡ್",
+        createYourAccount: "ರೋಗಿ ಖಾತೆ ತೆರೆಯಿರಿ", privateAccount: "OPD ಮತ್ತು IPD ಸೇವೆಗಳಿಗೆ ಖಾತೆ ತೆರೆಯಿರಿ.",
+        signInPrompt: "ಆಸ್ಪತ್ರೆ ಮತ್ತು ವೈದ್ಯರ ಲಭ್ಯತೆಗಾಗಿ ಸೈನ್ ಇನ್ ಮಾಡಿ.", createAccountAction: "ಖಾತೆ ತೆರೆಯಿರಿ",
+      },
+    };
+    const t = key => (translations[state.language] || translations.en)[key] || translations.en[key] || key;
+
+    function applyAccessibility() {
+      document.body.classList.toggle("large-text", accessibility.largeText);
+      document.body.classList.toggle("high-contrast", accessibility.highContrast);
+    }
+
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[ch]));
+
+    const initials = name => String(name || "?").trim().split(/\s+/).slice(0, 2).map(p => p[0] || "").join("").toUpperCase();
+
+    const formatDate = value => {
+      if (!value) return "—";
+      const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value);
+      return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    };
+
+    const localDateString = (offsetDays = 0) => {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0, 10);
+    };
+
+    const formatFee = fee => (Number(fee) > 0 ? `₹${Number(fee).toLocaleString()}` : "Fee not listed");
+
+    const stateClass = status => {
+      const s = String(status || "").toLowerCase();
+      if (["available", "confirmed", "accepted", "approved", "completed", "verified"].includes(s)) return "state-ok";
+      if (["pending", "busy", "on break", "rescheduled"].includes(s)) return "state-warn";
+      if (["unavailable", "rejected", "cancelled", "closed", "fully booked", "no schedule"].includes(s)) return "state-bad";
+      return "state-info";
+    };
+
+    const formatStatusLabel = status => {
+      const s = String(status || "Unavailable");
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    };
+
+    const api = async (path, options = {}) => {
+      const headers = new Headers(options.headers || {});
+      if (options.body && !(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
+      if (state.csrf && ["POST", "PUT", "PATCH", "DELETE"].includes((options.method || "GET").toUpperCase())) {
+        headers.set("X-CSRF-Token", state.csrf);
+      }
+      const response = await fetch(path, { credentials: "same-origin", ...options, headers });
+      const data = await response.json().catch(() => ({ error: "The server returned an invalid response." }));
+      if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+      return data;
+    };
+
+    function toast(message) {
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.textContent = message;
+      $("#toastHost").append(el);
+      setTimeout(() => el.remove(), 4400);
+    }
+
+    function openModal(html) {
+      $("#modalHost").innerHTML = `<div class="modal-backdrop" role="presentation"><section class="modal" role="dialog" aria-modal="true"><button class="modal-close" aria-label="Close dialog">&times;</button>${html}</section></div>`;
+      $("#modalHost .modal-close").onclick = closeModal;
+      $("#modalHost .modal-backdrop").addEventListener("click", e => {
+        if (e.target.classList.contains("modal-backdrop")) closeModal();
+      });
+      $$("#modalHost img.doctor-photo").forEach(img => img.addEventListener("error", () => {
+        const fb = document.createElement("div"); fb.className = "doctor-photo"; fb.textContent = initials(img.alt); img.replaceWith(fb);
+      }, { once: true }));
+      $$("#modalHost img.hospital-photo").forEach(img => img.addEventListener("error", () => {
+        const fb = document.createElement("div"); fb.className = "hospital-image"; fb.textContent = "Photo not available"; img.replaceWith(fb);
+      }, { once: true }));
+      $$("#modalHost [data-book-doctor]").forEach(btn => btn.addEventListener("click", () => {
+        const docId = btn.dataset.bookDoctor;
+        const hospId = btn.dataset.hospitalId || "";
+        closeModal();
+        goToBooking({ hospital_id: hospId, doctor_id: docId });
+      }));
+    }
+
+    function closeModal() { $("#modalHost").innerHTML = ""; }
+
+    function confirmModal(title, message, onConfirm, confirmLabel = "Confirm") {
+      openModal(`
+        <span class="kicker">Confirmation</span>
+        <h2>${esc(title)}</h2>
+        <p class="muted">${esc(message)}</p>
+        <div class="row" style="margin-top:16px">
+          <button id="confirmModalOk" class="btn btn-danger">${esc(confirmLabel)}</button>
+          <button id="confirmModalCancel" class="btn btn-light">Cancel</button>
+        </div>
+      `);
+      $("#confirmModalCancel").onclick = closeModal;
+      $("#confirmModalOk").onclick = async () => {
+        closeModal();
+        await onConfirm();
+      };
+    }
+
+    /* ---------------- Auth Flow ---------------- */
+    function setAuthError(msg) {
+      const el = $("#authError");
+      el.textContent = msg;
+      el.classList.toggle("hidden", !msg);
+    }
+
+    function selectAuthRole(role) {
+      authRole = role;
+      $$("#roleSelector [data-auth-role]").forEach(btn => {
+        const active = btn.dataset.authRole === role;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-pressed", String(active));
+      });
+      $("#hospitalRoleLink").classList.toggle("active", role === "hospital");
+      $("#authHeading").textContent = authRegisterMode
+        ? t("createYourAccount")
+        : role === "admin" ? "Admin sign in" : role === "hospital" ? "Hospital staff sign in" : t("welcome");
+      $("#authSub").textContent = authRegisterMode
+        ? t("privateAccount")
+        : role === "patient" ? t("signInPrompt") : "Sign in to manage hospitals, doctors, OPD slots, and IPD beds.";
+      $("#authEyebrow").textContent = role === "patient" ? "Patient portal" : role === "admin" ? "Platform administration" : "Hospital operations";
+    }
+
+    function toggleAuth(register) {
+      authRegisterMode = register;
+      $("#nameField").classList.toggle("hidden", !register);
+      $("#phoneField").classList.toggle("hidden", !register);
+      $("#confirmField").classList.toggle("hidden", !register);
+      $("#roleSelector").classList.toggle("hidden", register);
+      $("#hospitalRoleLink").classList.toggle("hidden", register);
+      $("#fullName").required = register;
+      $("#phone").required = register;
+      $("#confirmPassword").required = register;
+      $("#authSwitchText").textContent = register ? "Already have an account?" : "New to CareFind AI?";
+      $("#authSwitchButton").textContent = register ? "Back to sign in" : "Create patient account";
+      $("#authSubmitLabel").textContent = register ? t("createAccountAction") : "Sign in";
+      $("#password").autocomplete = register ? "new-password" : "current-password";
+      $("#password").minLength = register ? 10 : 0;
+      $("#password").placeholder = register ? "At least 10 characters" : "Enter your password";
+      $("#authLanguageToggle").textContent = state.language === "en" ? "ಕನ್ನಡ" : "English";
+      selectAuthRole(authRole);
+      setAuthError("");
+    }
+
+    $$("#roleSelector [data-auth-role]").forEach(btn => btn.addEventListener("click", () => selectAuthRole(btn.dataset.authRole)));
+    $("#hospitalRoleLink").addEventListener("click", () => selectAuthRole("hospital"));
+    $("#authSwitchButton").addEventListener("click", () => toggleAuth(!authRegisterMode));
+    $("#authLanguageToggle").addEventListener("click", () => {
+      state.language = state.language === "en" ? "kn" : "en";
+      localStorage.setItem("carepath-language", state.language);
+      toggleAuth(authRegisterMode);
+    });
+    $("#togglePassword").addEventListener("click", () => {
+      const input = $("#password");
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      $("#togglePassword").textContent = show ? "Hide" : "Show";
+    });
+
+    $("#authForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      setAuthError("");
+      const register = authRegisterMode;
+      const email = $("#email"), password = $("#password");
+      if (!email.validity.valid) { setAuthError("Enter a valid email address."); email.focus(); return; }
+      const payload = { email: email.value.trim(), password: password.value };
+      if (register) {
+        const name = $("#fullName").value.trim(), phone = $("#phone");
+        if (name.length < 2 || name.length > 100) { setAuthError("Enter your full name (2–100 characters)."); $("#fullName").focus(); return; }
+        if (!phone.validity.valid || phone.value.replace(/\D/g, "").length < 7) { setAuthError("Enter a valid phone number."); phone.focus(); return; }
+        if (password.value.length < 10 || password.value.length > 128) { setAuthError("Password must contain 10–128 characters."); password.focus(); return; }
+        if (password.value !== $("#confirmPassword").value) { setAuthError("Your passwords do not match."); $("#confirmPassword").focus(); return; }
+        payload.full_name = name;
+        payload.phone = phone.value.trim();
+      } else {
+        if (!password.value) { setAuthError("Enter your password."); password.focus(); return; }
+        payload.expected_role = authRole;
+      }
+      const btn = $("#authSubmit");
+      btn.disabled = true;
+      $("#authSubmitLabel").textContent = register ? "Creating account..." : "Signing in...";
+      try {
+        const data = await api(register ? "/api/auth/register" : "/api/auth/login", { method: "POST", body: JSON.stringify(payload) });
+        state.user = data.user;
+        state.csrf = data.csrf_token;
+        state.page = "overview";
+        $("#authScreen").classList.add("hidden");
+        $("#appShell").classList.remove("hidden");
+        mountShell();
+        await navigate("overview");
+      } catch (err) {
+        setAuthError(err.message);
+      } finally {
+        btn.disabled = false;
+        $("#authSubmitLabel").textContent = register ? t("createAccountAction") : "Sign in";
+      }
+    });
+
+    async function checkSession() {
+      try {
+        const data = await api("/api/me");
+        state.user = data.user;
+        state.csrf = data.csrf_token;
+        $("#authScreen").classList.add("hidden");
+        $("#appShell").classList.remove("hidden");
+        mountShell();
+        await navigate("overview");
+      } catch (_err) { /* signed out */ }
+    }
+
+    function navItems() {
+      if (state.user.role === "patient") {
+        return [
+          ["overview", "Home", "overview"],
+          ["disease", "Rx", "diseaseSearch"],
+          ["opd", "OPD", "opdBooking"],
+          ["ipd", "IPD", "ipdBeds"],
+          ["search", "Filter", "smartSearch"],
+          ["find", "Map", "findCare"],
+          ["appointments", "Appt", "appointments"],
+          ["health", "Me", "health"],
+          ["feedback", "Note", "feedback"],
+        ];
+      }
+      if (state.user.role === "hospital") {
+        return [
+          ["overview", "Home", "overview"],
+          ["profile", "Info", "profile"],
+          ["doctors", "Docs", "doctors"],
+          ["requests", "OPD", "requests"],
+          ["ipd", "IPD", "ipdManage"],
+        ];
+      }
+      return [
+        ["overview", "Home", "dashboard"],
+        ["verification", "Hosp", "verification"],
+        ["doctors", "Docs", "adminDoctors"],
+        ["appointments", "OPD", "adminAppointments"],
+        ["ipd", "IPD", "adminIpd"],
+        ["users", "User", "users"],
+        ["reports", "Flag", "reports"],
+      ];
+    }
+
+    function mountShell() {
+      const role = state.user.role;
+      const roleKey = role === "patient" ? "patientSpace" : role === "hospital" ? "hospitalSpace" : "adminSpace";
+      $("#roleLabel").textContent = t(roleKey);
+      $("#userName").textContent = state.user.full_name;
+      $("#userRole").textContent = role[0].toUpperCase() + role.slice(1);
+      $("#userAvatar").textContent = initials(state.user.full_name);
+      $("#navList").innerHTML = navItems().map(([id, badge, label]) =>
+        `<button class="nav-item ${state.page === id ? "active" : ""}" data-page="${id}"><span class="nav-icon mono" style="font-size:10.5px;width:30px;opacity:.7">${badge}</span><span>${esc(t(label))}</span></button>`
+      ).join("");
+      $("#navList").onclick = e => {
+        const btn = e.target.closest("[data-page]");
+        if (btn) navigate(btn.dataset.page);
+      };
+      $("#logoutBtn").textContent = t("signOut");
+      $("#languageToggle").textContent = state.language === "en" ? "ಕನ್ನಡ" : "English";
+      $("#locationChip").classList.toggle("hidden", role !== "patient");
+      updateLocationChip();
+    }
+
+    $("#menuBtn").addEventListener("click", () => $("#sidebar").classList.toggle("open"));
+    $("#languageToggle").addEventListener("click", () => {
+      state.language = state.language === "en" ? "kn" : "en";
+      localStorage.setItem("carepath-language", state.language);
+      mountShell();
+      navigate(state.page);
+    });
+    $("#logoutBtn").addEventListener("click", async () => {
+      try { await api("/api/auth/logout", { method: "POST" }); } catch (_err) {}
+      clearInterval(state.updateTimer);
+      state.user = null; state.csrf = ""; state.location = null; state.hospitals = [];
+      $("#appShell").classList.add("hidden");
+      $("#authScreen").classList.remove("hidden");
+      $("#sidebar").classList.remove("open");
+      authRole = "patient";
+      toggleAuth(false);
+    });
+
+    function updateLocationChip() {
+      const el = $("#locationChip");
+      if (!el) return;
+      el.textContent = state.location
+        ? `Location: ${state.location.display_name || `${state.location.latitude.toFixed(3)}, ${state.location.longitude.toFixed(3)}`}`
+        : "Location not set";
+      el.title = state.location?.display_name || "Choose a location";
+      const cur = $("#findLocationLabel");
+      if (cur) cur.textContent = state.location?.display_name || "Not set — choose GPS or search";
+    }
+
+    async function requestGps() {
+      if (!navigator.geolocation) { toast("This browser does not support GPS. Search for your city instead."); return; }
+      toast("Requesting location permission for OpenStreetMap nearby lookup.");
+      navigator.geolocation.getCurrentPosition(async pos => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          state.location = await api("/api/location/reverse", { method: "POST", body: JSON.stringify({ latitude, longitude }) });
+          updateLocationChip();
+          if (state.map) showMap();
+          toast(`Location set: ${state.location.display_name}`);
+        } catch (err) {
+          state.location = { latitude, longitude, display_name: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` };
+          updateLocationChip();
+          if (state.map) showMap();
+        }
+      }, () => {
+        toast("GPS unavailable or denied. Search for your city or area instead.");
+      }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+    }
+
+    async function chooseLocationFromInput() {
+      const q = $("#locationSearch")?.value.trim();
+      if (!q) return toast("Enter a city or area to search.");
+      try {
+        state.location = await api(`/api/location/search?q=${encodeURIComponent(q)}`);
+        updateLocationChip();
+        toast(`Location set: ${state.location.display_name}`);
+        if (state.map) showMap();
+      } catch (err) { toast(err.message); }
+    }
+
+    function bindLocationActions(root) {
+      $("#locationSearchBtn", root)?.addEventListener("click", chooseLocationFromInput);
+      $("#locationSearch", root)?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); chooseLocationFromInput(); } });
+      $("#gpsBtn", root)?.addEventListener("click", requestGps);
+    }
+
+    function pageHeader(kicker, title, subtitle, action = "") {
+      return `<div class="page-head"><div><span class="kicker">${esc(kicker)}</span><h1>${esc(title)}</h1><p>${esc(subtitle)}</p></div>${action ? `<div class="row">${action}</div>` : ""}</div>`;
+    }
+
+    function stat(value, label) {
+      return `<article class="card stat-card"><div class="stat-value">${esc(value)}</div><div class="stat-label">${esc(label)}</div></article>`;
+    }
+
+    function goToBooking(prefill = {}) {
+      state.bookingPrefill = prefill;
+      navigate("opd");
+    }
+
+    async function ensureDirectoryData() {
+      const [dirRes, disRes] = await Promise.all([
+        api("/api/hospitals/directory"),
+        api("/api/diseases"),
+      ]);
+      state.directory = dirRes.hospitals || [];
+      state.diseases = disRes.diseases || [];
+    }
+
+    async function navigate(page) {
+      clearInterval(state.updateTimer);
+      state.page = page;
+      $("#sidebar").classList.remove("open");
+      const found = navItems().find(item => item[0] === page);
+      $("#topTitle").textContent = found ? t(found[2]) : "CareFind AI";
+      $$("#navList .nav-item").forEach(el => el.classList.toggle("active", el.dataset.page === page));
+      const content = $("#pageContent");
+      content.innerHTML = `<div class="muted" style="padding:20px 0">Loading workspace...</div>`;
+      try {
+        if (state.user.role === "patient") {
+          if (page === "overview") await renderPatientOverview(content);
+          else if (page === "disease") await renderDiseaseSearch(content);
+          else if (page === "opd") await renderOpdAndBooking(content);
+          else if (page === "ipd") await renderIpdPage(content);
+          else if (page === "search") await renderSmartSearchPage(content);
+          else if (page === "find") renderFindPage(content);
+          else if (page === "appointments") await renderPatientAppointments(content);
+          else if (page === "health") await renderHealth(content);
+          else if (page === "feedback") await renderFeedback(content);
+          else await renderPatientOverview(content);
+          if (page === "find") startDoctorPolling();
+        } else if (state.user.role === "hospital") {
+          state.hospitalData = await api("/api/hospital/dashboard");
+          if (page === "overview") renderHospitalOverview(content);
+          else if (page === "profile") renderHospitalProfile(content);
+          else if (page === "doctors") renderHospitalDoctors(content);
+          else if (page === "requests") renderHospitalRequests(content);
+          else if (page === "ipd") renderHospitalIpd(content);
+          else renderHospitalOverview(content);
+          startHospitalPolling();
+        } else {
+          state.adminData = await api("/api/admin/dashboard");
+          if (page === "overview") renderAdminOverview(content);
+          else if (page === "verification") renderAdminHospitals(content);
+          else if (page === "doctors") renderAdminDoctors(content);
+          else if (page === "appointments") renderAdminAppointments(content);
+          else if (page === "ipd") renderAdminIpd(content);
+          else if (page === "users") renderAdminUsers(content);
+          else if (page === "reports") renderAdminReports(content);
+          else renderAdminOverview(content);
+        }
+      } catch (err) {
+        content.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
+      }
+    }
+
+    function bindPageActions(root) {
+      root.addEventListener("click", e => {
+        const go = e.target.closest("[data-go]");
+        if (go) navigate(go.dataset.go);
+      });
+    }
+
+    /* =====================================================================
+       PATIENT WORKSPACE
+       ===================================================================== */
+
+    async function renderPatientOverview(root) {
+      const [apptsRes, profile, bedsRes] = await Promise.all([
+        api("/api/appointments"),
+        api("/api/profile"),
+        api("/api/ipd/beds"),
+      ]);
+      state.profile = profile;
+      const upcoming = apptsRes.appointments.filter(a =>
+        ["pending", "confirmed", "accepted", "rescheduled"].includes(a.status) && a.appointment_date >= localDateString()
+      );
+      const totalAvailBeds = (bedsRes.hospitals || []).reduce((acc, h) => acc + (h.summary?.available_beds || 0), 0);
+      const activeAdmissions = (profile.admissions || []).filter(r => ["Pending", "Approved"].includes(r.status));
+
+      root.innerHTML = pageHeader(
+        "Patient Dashboard",
+        `${t("welcome")}, ${state.user.full_name.split(" ")[0]}`,
+        "Search by disease, check hospital-specific doctor availability, book OPD appointments, and monitor IPD beds.",
+        `<button class="btn btn-primary" data-go="opd">Book OPD appointment</button><button class="btn btn-light" data-go="disease">Disease search</button>`
+      )
+        + `<div class="grid grid-4">
+             ${stat(upcoming.length, "Upcoming OPD appointments")}
+             ${stat(activeAdmissions.length, "Active IPD requests")}
+             ${stat(totalAvailBeds, "Listed available IPD beds")}
+             ${stat(profile.history.length, "Saved health records")}
+           </div>
+           <div class="section-title"><h2>Healthcare Services</h2></div>
+           <div class="grid grid-3">
+             <article class="card">
+               <span class="kicker">OPD · Outpatient</span>
+               <h3>Check Doctor Slots & Book</h3>
+               <p class="small muted">Choose a specific hospital, disease or department, doctor, and date to see real remaining appointment slots.</p>
+               <button class="btn btn-primary btn-small" data-go="opd">Open OPD booking</button>
+             </article>
+             <article class="card">
+               <span class="kicker">Disease Guidance</span>
+               <h3>Disease-Based Recommendations</h3>
+               <p class="small muted">Enter a health concern like Heart Disease, Skin Disease, Eye Problems, or Diabetes to find matching specialists.</p>
+               <button class="btn btn-teal btn-small" data-go="disease">Search by disease</button>
+             </article>
+             <article class="card">
+               <span class="kicker">IPD · Inpatient</span>
+               <h3>Bed Availability & Admissions</h3>
+               <p class="small muted">Inspect General, Private, and ICU bed availability per hospital and submit an inpatient admission request.</p>
+               <button class="btn btn-light btn-small" data-go="ipd">Check IPD beds</button>
+             </article>
+           </div>
+           <div class="grid grid-2" style="margin-top:20px">
+             <section class="card">
+               <div class="row-between" style="margin-bottom:8px">
+                 <h2>Upcoming OPD Appointments</h2>
+                 <button class="btn btn-quiet btn-small" data-go="appointments">View all</button>
+               </div>
+               ${upcoming.length ? `<div class="divider-list">${upcoming.slice(0, 4).map(a => `
+                 <div class="row-between">
+                   <div>
+                     <strong>${esc(a.doctor_name)}</strong>
+                     <div class="meta-line">
+                       <span class="code-text">${esc(a.appointment_code || `#${a.id}`)}</span>
+                       <span class="meta-sep">·</span><span>${esc(a.hospital_name)}</span>
+                       <span class="meta-sep">·</span><span>${formatDate(a.appointment_date)} at ${esc(a.appointment_time)}</span>
+                     </div>
+                   </div>
+                   <span class="small ${stateClass(a.status)}">${esc(formatStatusLabel(a.status))}</span>
+                 </div>`).join("")}</div>`
+                 : `<div class="empty">No upcoming OPD appointments yet.</div>`}
+             </section>
+             <section class="card">
+               <div class="row-between" style="margin-bottom:8px">
+                 <h2>Recent IPD Admission Requests</h2>
+                 <button class="btn btn-quiet btn-small" data-go="ipd">Manage IPD</button>
+               </div>
+               ${(profile.admissions || []).length ? `<div class="divider-list">${profile.admissions.slice(0, 4).map(r => `
+                 <div class="row-between">
+                   <div>
+                     <strong>${esc(r.hospital_name)}</strong>
+                     <div class="meta-line">
+                       <span class="code-text">${esc(r.request_code || `#${r.id}`)}</span>
+                       <span class="meta-sep">·</span><span>${esc(r.bed_type)} Bed</span>
+                       <span class="meta-sep">·</span><span>${formatDate(r.preferred_date)}</span>
+                     </div>
+                   </div>
+                   <span class="small ${stateClass(r.status)}">${esc(r.status)}</span>
+                 </div>`).join("")}</div>`
+                 : `<div class="empty">No IPD admission requests submitted.</div>`}
+             </section>
+           </div>
+           <div class="section-title"><h2>Location for Nearby Map Discovery</h2></div>
+           <div class="card">
+             <div class="location-panel">
+               <div class="field"><label for="locationSearch">City or area</label><input id="locationSearch" placeholder="e.g. Hassan, Bengaluru, Mysuru"></div>
+               <button id="locationSearchBtn" class="btn btn-light">Search location</button>
+               <button id="gpsBtn" class="btn btn-teal">Use GPS</button>
+               <button class="btn btn-quiet" data-go="find">Open map search</button>
+             </div>
+             <p class="small muted">GPS is optional and only used to search nearby OpenStreetMap hospitals and compute driving directions.</p>
+           </div>`;
+      bindPageActions(root);
+      bindLocationActions(root);
+    }
+
+    /* ---------------- Disease-Based Doctor Recommendation (Requirement 2) ---------------- */
+    async function renderDiseaseSearch(root) {
+      await ensureDirectoryData();
+      const today = localDateString();
+      root.innerHTML = pageHeader(
+        "Disease-Based Doctor Recommendation",
+        "Find the Right Specialist by Disease",
+        "Enter a disease or health concern to see recommended specialists, consultation fees, timings, and OPD availability."
+      )
+        + `<div class="alert alert-warning" style="margin-bottom:16px">
+             <strong>Medical Notice:</strong> Specialist suggestions are for informational guidance only and are <strong>not a confirmed diagnosis</strong>. For emergencies, call local emergency services immediately.
+           </div>
+           <section class="card">
+             <form id="diseaseSearchForm" class="grid grid-4" style="align-items:end">
+               <div class="field" style="margin:0;grid-column:span 2">
+                 <label for="diseaseQuery">Disease or health problem</label>
+                 <input id="diseaseQuery" placeholder="e.g. Heart Disease, Skin Disease, Eye Problems, Bone Pain, Diabetes..." required>
+               </div>
+               <div class="field" style="margin:0">
+                 <label for="diseaseCity">City / Area (optional)</label>
+                 <input id="diseaseCity" placeholder="e.g. Hassan, Bengaluru">
+               </div>
+               <div class="field" style="margin:0">
+                 <label for="diseaseDate">Check availability for date</label>
+                 <input id="diseaseDate" type="date" min="${today}" value="${today}">
+               </div>
+               <div class="row" style="grid-column:1 / -1;margin-top:4px">
+                 <button class="btn btn-primary" type="submit">Recommend doctors</button>
+                 <span class="small muted">Or pick a common condition below</span>
+               </div>
+             </form>
+           </section>
+           <div class="section-title"><h2>Common Conditions & Specialists</h2></div>
+           <div class="disease-grid" id="diseaseQuickGrid">
+             ${state.diseases.map(d => `
+               <button type="button" class="disease-tile" data-disease="${esc(d.name)}">
+                 <strong>${esc(d.name)}</strong>
+                 <span>${esc(d.recommended_specialist)}</span>
+               </button>`).join("")}
+           </div>
+           <div id="diseaseResultsHost" style="margin-top:20px"></div>`;
+
+      async function runDiseaseLookup(q) {
+        const host = $("#diseaseResultsHost");
+        const city = $("#diseaseCity").value.trim();
+        const dateVal = $("#diseaseDate").value;
+        host.innerHTML = `<div class="muted">Finding specialists for "${esc(q)}"...</div>`;
+        try {
+          const params = new URLSearchParams({ q });
+          if (city) params.set("city", city);
+          if (dateVal) params.set("date", dateVal);
+          const data = await api(`/api/diseases/recommend?${params.toString()}`);
+          host.innerHTML = `
+            <section class="card" style="margin-bottom:16px">
+              <div class="row-between">
+                <div>
+                  <span class="kicker">Recommended Specialist · Not a Diagnosis</span>
+                  <h2>${esc(data.disease.name)} &rarr; ${esc(data.recommended_specialist)} (${esc(data.recommended_department)})</h2>
+                  <p class="small muted">${esc(data.disease.guidance_note || "")}</p>
+                </div>
+                <span class="small muted">${data.doctors.length} matching doctor(s)</span>
+              </div>
+              ${data.emergency_warning ? `<div class="alert alert-danger" style="margin-top:10px"><strong>Urgent Symptom Caution:</strong> Heart, neurological, or breathing emergencies require immediate emergency room care. Do not delay for an online appointment.</div>` : ""}
+              <p class="small muted" style="margin-top:8px">${esc(data.disclaimer)}</p>
+            </section>
+            ${data.doctors.length ? `<div class="grid grid-2">${data.doctors.map(doc => {
+              const dateAvail = doc.date_checked ? doc.date_available : (doc.availability === "Available" && doc.opd_available);
+              const statusTxt = doc.date_checked
+                ? (doc.date_available ? `Available (${doc.remaining_slots} slots on ${formatDate(doc.date_checked)})` : `Unavailable on ${formatDate(doc.date_checked)}`)
+                : (doc.opd_available ? doc.availability : "OPD Closed");
+              return `<article class="card">
+                <div class="row-between">
+                  <div>
+                    <h3>${esc(doc.name)}</h3>
+                    <div class="meta-line">
+                      <span>${esc(doc.specialty)}</span><span class="meta-sep">·</span>
+                      <span>${esc(doc.department)}</span><span class="meta-sep">·</span>
+                      <span>${esc(doc.experience_years)} yrs exp</span>
+                    </div>
+                  </div>
+                  <span class="small ${dateAvail ? "state-ok" : "state-bad"}">${esc(statusTxt)}</span>
+                </div>
+                <div class="meta-line" style="margin-top:8px">
+                  <strong>Hospital:</strong> <span>${esc(doc.hospital_name)}</span>
+                  ${doc.hospital_city ? `<span class="meta-sep">·</span><span>${esc(doc.hospital_city)}</span>` : ""}
+                  ${doc.is_sample || doc.hospital_is_sample ? `<span class="meta-sep">·</span><span class="demo-label">DEMO DATA</span>` : ""}
+                </div>
+                <div class="meta-line">
+                  <strong>Disease matched:</strong> <span>${esc(doc.disease_name)}</span>
+                  <span class="meta-sep">·</span>
+                  <strong>Fee:</strong> <span class="mono">${esc(formatFee(doc.consultation_fee))}</span>
+                  <span class="meta-sep">·</span>
+                  <strong>OPD:</strong> <span>${doc.opd_available ? "OPD Open" : "OPD Closed"}</span>
+                </div>
+                <div class="meta-line"><strong>Timings:</strong> <span>${esc(doc.consultation_timings || "Check schedule")}</span></div>
+                ${doc.availability_reason && !dateAvail ? `<div class="small state-bad" style="margin-top:6px">${esc(doc.availability_reason)}</div>` : ""}
+                <div class="row" style="margin-top:12px">
+                  <button class="btn btn-primary btn-small" data-book-from-disease data-hospital="${doc.hospital_id}" data-doctor="${doc.id}" data-disease="${esc(doc.disease_name)}" data-date="${esc(dateVal)}">
+                    Check slots &amp; book OPD
+                  </button>
+                </div>
+              </article>`;
+            }).join("")}</div>` : `<div class="empty">No registered doctors currently match ${esc(data.recommended_specialist)} with your filters. Try clearing the city filter or checking another hospital.</div>`}`;
+
+          $$("[data-book-from-disease]", host).forEach(btn => btn.addEventListener("click", () => {
+            goToBooking({
+              hospital_id: btn.dataset.hospital,
+              doctor_id: btn.dataset.doctor,
+              disease: btn.dataset.disease,
+              date: btn.dataset.date,
+            });
+          }));
+        } catch (err) {
+          host.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
+        }
+      }
+
+      $("#diseaseSearchForm").addEventListener("submit", e => {
+        e.preventDefault();
+        runDiseaseLookup($("#diseaseQuery").value.trim());
+      });
+      $("#diseaseQuickGrid").addEventListener("click", e => {
+        const tile = e.target.closest("[data-disease]");
+        if (!tile) return;
+        $("#diseaseQuery").value = tile.dataset.disease;
+        runDiseaseLookup(tile.dataset.disease);
+      });
+    }
+
+    /* ---------------- OPD Services, Hospital-Specific Doctor Availability & Booking (Req 1, 3, 4) ---------------- */
+    async function renderOpdAndBooking(root) {
+      await ensureDirectoryData();
+      const pre = state.bookingPrefill || {};
+      state.bookingPrefill = null;
+      const defaultDate = pre.date || localDateString();
+      const defaultHospitalId = pre.hospital_id ? String(pre.hospital_id) : (state.directory[0] ? String(state.directory[0].id) : "");
+
+      root.innerHTML = pageHeader(
+        "OPD Services & Appointment Booking",
+        "Check Hospital-Specific Doctor Availability",
+        "Verify whether a specific doctor is actually available at a particular hospital on your chosen date, view remaining time slots, and book with instant confirmation ID."
+      )
+        + `<section class="card">
+             <h2>Step 1–5 · Select Hospital, Disease/Department, Doctor & Date</h2>
+             <form id="availabilityCheckForm" class="grid grid-4" style="margin-top:10px;align-items:end">
+               <div class="field" style="margin:0">
+                 <label for="opdHospital">1. Hospital</label>
+                 <select id="opdHospital" required>
+                   <option value="">Select a hospital</option>
+                   ${state.directory.map(h => `<option value="${h.id}" ${String(h.id) === defaultHospitalId ? "selected" : ""}>${esc(h.name)}${h.city ? ` (${esc(h.city)})` : ""}</option>`).join("")}
+                 </select>
+               </div>
+               <div class="field" style="margin:0">
+                 <label for="opdDisease">2. Disease / Specialty (optional)</label>
+                 <select id="opdDisease">
+                   <option value="">All diseases &amp; departments</option>
+                   ${state.diseases.map(d => `<option value="${esc(d.name)}" ${pre.disease === d.name ? "selected" : ""}>${esc(d.name)} (${esc(d.department)})</option>`).join("")}
+                 </select>
+               </div>
+               <div class="field" style="margin:0">
+                 <label for="opdDoctor">3. Particular Doctor (optional)</label>
+                 <select id="opdDoctor"><option value="">All doctors at hospital</option></select>
+               </div>
+               <div class="field" style="margin:0">
+                 <label for="opdDate">4. Appointment Date</label>
+                 <input id="opdDate" type="date" min="${localDateString()}" value="${esc(defaultDate)}" required>
+               </div>
+               <div class="row" style="grid-column:1 / -1;margin-top:6px">
+                 <button class="btn btn-primary" type="submit">Check real-time OPD slots</button>
+                 <span class="small muted">Doctors who are unavailable, off-duty on that weekday, or fully booked are never shown as available.</span>
+               </div>
+             </form>
+           </section>
+           <div id="availabilityResultHost" style="margin-top:18px"></div>`;
+
+      const hospSelect = $("#opdHospital");
+      const docSelect = $("#opdDoctor");
+      const diseaseSelect = $("#opdDisease");
+      const dateInput = $("#opdDate");
+
+      function populateDoctorsForHospital(selectDocId = "") {
+        const hid = hospSelect.value;
+        const hosp = state.directory.find(h => String(h.id) === String(hid));
+        const docs = hosp ? (hosp.doctors || []) : [];
+        docSelect.innerHTML = `<option value="">All doctors at this hospital (${docs.length})</option>`
+          + docs.map(d => `<option value="${d.id}" ${String(d.id) === String(selectDocId) ? "selected" : ""}>${esc(d.name)} — ${esc(d.specialty)} (${esc(d.availability)})</option>`).join("");
+      }
+
+      hospSelect.addEventListener("change", () => populateDoctorsForHospital());
+      populateDoctorsForHospital(pre.doctor_id || "");
+
+      let selectedSlot = null;
+
+      async function runAvailabilityCheck() {
+        const hid = hospSelect.value;
+        const dateVal = dateInput.value;
+        const host = $("#availabilityResultHost");
+        if (!hid || !dateVal) {
+          host.innerHTML = `<div class="empty">Select a hospital and date to check available doctors and OPD slots.</div>`;
+          return;
+        }
+        host.innerHTML = `<div class="muted">Checking hospital-specific schedule and booked slots...</div>`;
+        try {
+          const params = new URLSearchParams({ hospital_id: hid, date: dateVal });
+          if (docSelect.value) params.set("doctor_id", docSelect.value);
+          if (diseaseSelect.value) params.set("disease", diseaseSelect.value);
+          const data = await api(`/api/availability/check?${params.toString()}`);
+
+          if (!data.results.length) {
+            host.innerHTML = `<div class="empty">${esc(data.message || `No doctors matching these criteria are assigned to ${data.hospital.name}.`)}</div>`;
+            return;
+          }
+
+          host.innerHTML = `
+            <div class="section-title">
+              <h2>Step 6–7 · Doctor Availability at ${esc(data.hospital.name)} (${esc(data.weekday)}, ${formatDate(data.date)})</h2>
+              ${data.hospital.is_sample ? `<span class="demo-label">DEMO DATA · Sample Hospital</span>` : `<span class="small ${data.hospital.verified ? "state-ok" : "state-warn"}">${data.hospital.verified ? "Verified Hospital" : "Verification Pending"}</span>`}
+            </div>
+            <div class="stack">
+              ${data.results.map(d => {
+                const slotButtons = d.slots.length ? d.slots.map(s => `
+                  <button type="button"
+                    class="slot-btn ${s.booked ? "booked" : ""}"
+                    ${s.available ? "" : "disabled"}
+                    data-pick-slot
+                    data-hospital-id="${d.hospital_id}"
+                    data-doctor-id="${d.id}"
+                    data-doctor-name="${esc(d.name)}"
+                    data-department="${esc(d.department)}"
+                    data-fee="${d.consultation_fee}"
+                    data-time="${esc(s.time)}"
+                    title="${s.booked ? "Already booked" : s.past ? "Time has passed" : `Select ${s.time}`}">
+                    ${esc(s.time)}${s.booked ? " (Booked)" : ""}
+                  </button>`).join("") : "";
+
+                return `<article class="card">
+                  <div class="row-between">
+                    <div>
+                      <h3>${esc(d.name)}</h3>
+                      <div class="meta-line">
+                        <span>${esc(d.qualification || "Qualified Specialist")}</span><span class="meta-sep">·</span>
+                        <span>${esc(d.specialty)} (${esc(d.department)})</span><span class="meta-sep">·</span>
+                        <span class="mono">${esc(formatFee(d.consultation_fee))}</span>
+                        ${d.is_sample ? `<span class="meta-sep">·</span><span class="demo-label">DEMO DATA</span>` : ""}
+                      </div>
+                      <div class="meta-line">
+                        <span>OPD Timings: ${esc(d.consultation_timings || "As scheduled")}</span>
+                        <span class="meta-sep">·</span>
+                        <span>Hospital status: ${esc(d.availability)}</span>
+                      </div>
+                    </div>
+                    <div style="text-align:right">
+                      <div class="${d.is_available ? "state-ok" : "state-bad"}">
+                        ${d.is_available ? `Available · ${d.remaining_slots}/${d.total_slots} slots left` : esc(d.date_status)}
+                      </div>
+                      <div class="small muted">${esc(d.reason)}</div>
+                    </div>
+                  </div>
+                  ${d.is_available ? `
+                    <div style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">
+                      <div class="small" style="font-weight:600">Select an available OPD time slot for ${formatDate(data.date)}:</div>
+                      <div class="slot-grid">${slotButtons}</div>
+                      <div class="booking-confirm-box hidden" id="bookBox-${d.id}" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+                        <form class="row" data-confirm-book="${d.id}" style="align-items:flex-end">
+                          <div class="field" style="flex:1;min-width:220px;margin:0">
+                            <label>Selected Slot &amp; Optional Note</label>
+                            <input type="text" name="note" maxlength="500" placeholder="Brief reason or symptom note for the doctor (optional)">
+                          </div>
+                          <button class="btn btn-primary" type="submit">Confirm OPD booking</button>
+                        </form>
+                      </div>
+                    </div>
+                  ` : `
+                    <div class="alert alert-warning" style="margin-top:12px">
+                      <strong>Not bookable on ${formatDate(data.date)}:</strong> ${esc(d.reason)}
+                    </div>
+                  `}
+                </article>`;
+              }).join("")}
+            </div>`;
+
+          $$("[data-pick-slot]", host).forEach(btn => btn.addEventListener("click", () => {
+            $$("[data-pick-slot]", host).forEach(b => b.classList.remove("selected"));
+            btn.classList.add("selected");
+            selectedSlot = {
+              hospital_id: Number(btn.dataset.hospitalId),
+              doctor_id: Number(btn.dataset.doctorId),
+              doctor_name: btn.dataset.doctorName,
+              department: btn.dataset.department,
+              fee: Number(btn.dataset.fee),
+              date: data.date,
+              time: btn.dataset.time,
+              disease_name: diseaseSelect.value || "",
+            };
+            $$(".booking-confirm-box", host).forEach(box => box.classList.add("hidden"));
+            const box = $(`#bookBox-${selectedSlot.doctor_id}`, host);
+            if (box) {
+              box.classList.remove("hidden");
+              $("button[type=submit]", box).textContent = `Book ${selectedSlot.time} (${formatFee(selectedSlot.fee)})`;
+            }
+          }));
+
+          $$("[data-confirm-book]", host).forEach(form => form.addEventListener("submit", async ev => {
+            ev.preventDefault();
+            if (!selectedSlot || String(selectedSlot.doctor_id) !== form.dataset.confirmBook) {
+              toast("Select an available time slot first.");
+              return;
+            }
+            const submitBtn = $("button[type=submit]", form);
+            submitBtn.disabled = true;
+            try {
+              const note = $("input[name=note]", form).value.trim();
+              const res = await api("/api/appointments", {
+                method: "POST",
+                body: JSON.stringify({
+                  hospital_id: selectedSlot.hospital_id,
+                  doctor_id: selectedSlot.doctor_id,
+                  date: selectedSlot.date,
+                  time: selectedSlot.time,
+                  disease_name: selectedSlot.disease_name,
+                  department: selectedSlot.department,
+                  note,
+                }),
+              });
+              const a = res.appointment;
+              openModal(`
+                <span class="kicker">OPD Appointment Confirmation</span>
+                <h2>Appointment Booked</h2>
+                <div class="alert alert-success" style="margin:12px 0">
+                  <strong>Unique Appointment ID:</strong> <span class="code-text">${esc(res.appointment_code)}</span><br>
+                  Status: <strong>${esc(formatStatusLabel(res.status))}</strong>
+                </div>
+                <div class="divider-list small">
+                  <div class="row-between"><span class="muted">Hospital</span><strong>${esc(a.hospital_name)}</strong></div>
+                  <div class="row-between"><span class="muted">Doctor</span><strong>${esc(a.doctor_name)} (${esc(a.specialty)})</strong></div>
+                  <div class="row-between"><span class="muted">Department / Disease</span><span>${esc(a.department)}${a.disease_name ? ` · ${esc(a.disease_name)}` : ""}</span></div>
+                  <div class="row-between"><span class="muted">Date &amp; Time</span><strong class="mono">${formatDate(a.appointment_date)} at ${esc(a.appointment_time)}</strong></div>
+                  <div class="row-between"><span class="muted">Consultation Fee</span><strong class="mono">${esc(formatFee(a.consultation_fee))}</strong></div>
+                </div>
+                <div class="row" style="margin-top:16px">
+                  <button class="btn btn-primary" id="goAppointmentsBtn">View in My Appointments</button>
+                  <button class="btn btn-light" id="stayAndRefreshBtn">Close</button>
+                </div>
+              `);
+              $("#goAppointmentsBtn").onclick = () => { closeModal(); navigate("appointments"); };
+              $("#stayAndRefreshBtn").onclick = () => { closeModal(); runAvailabilityCheck(); };
+              toast(res.message);
+            } catch (err) {
+              toast(err.message);
+              await runAvailabilityCheck();
+            } finally {
+              submitBtn.disabled = false;
+            }
+          }));
+        } catch (err) {
+          host.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
+        }
+      }
+
+      $("#availabilityCheckForm").addEventListener("submit", e => {
+        e.preventDefault();
+        runAvailabilityCheck();
+      });
+
+      if (defaultHospitalId) {
+        await runAvailabilityCheck();
+      }
+    }
+
+    /* ---------------- IPD Services, Bed Availability & Admission Requests (Requirement 1) ---------------- */
+    async function renderIpdPage(root) {
+      await ensureDirectoryData();
+      root.innerHTML = pageHeader(
+        "IPD · Inpatient Department",
+        "Hospital Bed Availability & Admissions",
+        "Check General, Private, and ICU bed availability at any listed hospital, submit an admission request, and track approval status."
+      )
+        + `<section class="card">
+             <form id="ipdFilterForm" class="grid grid-4" style="align-items:end">
+               <div class="field" style="margin:0">
+                 <label for="ipdHospitalFilter">Particular Hospital</label>
+                 <select id="ipdHospitalFilter">
+                   <option value="">All hospitals</option>
+                   ${state.directory.map(h => `<option value="${h.id}">${esc(h.name)}</option>`).join("")}
+                 </select>
+               </div>
+               <div class="field" style="margin:0">
+                 <label for="ipdCityFilter">Location / City</label>
+                 <input id="ipdCityFilter" placeholder="e.g. Hassan, Bengaluru">
+               </div>
+               <div class="field" style="margin:0">
+                 <label for="ipdBedTypeFilter">Bed Category</label>
+                 <select id="ipdBedTypeFilter">
+                   <option value="">All types (General / Private / ICU)</option>
+                   <option value="General">General Ward</option>
+                   <option value="Private">Private Room</option>
+                   <option value="ICU">ICU Bed</option>
+                 </select>
+               </div>
+               <div class="row" style="align-items:center">
+                 <label class="row small" style="margin-right:8px"><input id="ipdAvailOnly" type="checkbox"> Available beds only</label>
+                 <button class="btn btn-primary btn-small" type="submit">Filter</button>
+               </div>
+             </form>
+           </section>
+           <div id="ipdHospitalsHost" class="stack" style="margin-top:16px"></div>
+           <div class="section-title"><h2>My IPD Admission Requests</h2></div>
+           <div id="myAdmissionsHost"></div>`;
+
+      async function loadIpdData() {
+        const params = new URLSearchParams();
+        if ($("#ipdHospitalFilter").value) params.set("hospital_id", $("#ipdHospitalFilter").value);
+        if ($("#ipdCityFilter").value.trim()) params.set("city", $("#ipdCityFilter").value.trim());
+        if ($("#ipdBedTypeFilter").value) params.set("bed_type", $("#ipdBedTypeFilter").value);
+        if ($("#ipdAvailOnly").checked) params.set("available_only", "1");
+
+        const [bedsData, admData] = await Promise.all([
+          api(`/api/ipd/beds?${params.toString()}`),
+          api("/api/ipd/admissions"),
+        ]);
+
+        const host = $("#ipdHospitalsHost");
+        const hospitals = bedsData.hospitals || [];
+        if (!hospitals.length) {
+          host.innerHTML = `<div class="empty">No hospitals match your IPD bed filters.</div>`;
+        } else {
+          host.innerHTML = hospitals.map(h => {
+            const beds = h.beds || [];
+            const hasReportedBeds = beds.length > 0;
+            const totalAvail = h.summary?.available_beds || 0;
+            return `<article class="card">
+              <div class="row-between">
+                <div>
+                  <h3>${esc(h.hospital_name)}</h3>
+                  <div class="meta-line">
+                    <span>${esc(h.address || h.city || "Location not listed")}</span>
+                    ${h.phone ? `<span class="meta-sep">·</span><span>${esc(h.phone)}</span>` : ""}
+                    <span class="meta-sep">·</span>
+                    <span class="${h.verified ? "state-ok" : "state-warn"}">${h.verified ? "Verified" : "Pending verification"}</span>
+                    ${h.is_sample ? `<span class="meta-sep">·</span><span class="demo-label">DEMO DATA · Not live hospital inventory</span>` : ""}
+                  </div>
+                </div>
+                <span class="small ${totalAvail > 0 ? "state-ok" : "state-bad"}">
+                  ${hasReportedBeds ? `${totalAvail} bed(s) available` : "IPD inventory not reported"}
+                </span>
+              </div>
+              ${hasReportedBeds ? `
+                <div class="bed-metrics">
+                  ${["General", "Private", "ICU"].map(type => {
+                    const b = beds.find(x => x.bed_type === type);
+                    if (!b) return `<div class="bed-col"><div class="bed-name">${type} Beds</div><div class="bed-num muted">—</div><div class="small muted">Not listed</div></div>`;
+                    return `<div class="bed-col">
+                      <div class="bed-name">${type} Beds</div>
+                      <div class="bed-num ${b.available_beds > 0 ? "state-ok" : "state-bad"}">${b.available_beds} / ${b.total_beds}</div>
+                      <div class="small muted">Available · ₹${Number(b.daily_charge).toLocaleString()}/day</div>
+                    </div>`;
+                  }).join("")}
+                </div>
+                <div class="row">
+                  ${beds.filter(b => b.available_beds > 0).map(b => `
+                    <button class="btn btn-teal btn-small" data-request-ipd data-hosp="${h.hospital_id}" data-hosp-name="${esc(h.hospital_name)}" data-bed="${esc(b.bed_type)}">
+                      Request ${esc(b.bed_type)} Admission
+                    </button>`).join("") || `<span class="small state-bad">All listed beds are currently occupied.</span>`}
+                </div>
+              ` : `<p class="small muted" style="margin-top:10px">This hospital has not reported live IPD bed counts yet. Hospital staff or an admin can update General, Private, and ICU bed availability from their dashboard.</p>`}
+            </article>`;
+          }).join("");
+
+          $$("[data-request-ipd]", host).forEach(btn => btn.addEventListener("click", () => {
+            openAdmissionModal(Number(btn.dataset.hosp), btn.dataset.hospName, btn.dataset.bed);
+          }));
+        }
+
+        const admHost = $("#myAdmissionsHost");
+        const adms = admData.admissions || [];
+        admHost.innerHTML = adms.length ? `
+          <div class="card table-wrap">
+            <table>
+              <thead><tr><th>Request ID</th><th>Hospital</th><th>Bed Type</th><th>Reason</th><th>Preferred Date</th><th>Status</th><th>Admin Note</th><th>Action</th></tr></thead>
+              <tbody>
+                ${adms.map(r => `<tr>
+                  <td class="code-text">${esc(r.request_code || `#${r.id}`)}</td>
+                  <td><strong>${esc(r.hospital_name)}</strong>${r.hospital_is_sample ? `<br><span class="demo-label">DEMO DATA</span>` : ""}</td>
+                  <td>${esc(r.bed_type)}</td>
+                  <td>${esc(r.disease_or_reason)}</td>
+                  <td class="mono">${formatDate(r.preferred_date)}</td>
+                  <td><span class="${stateClass(r.status)}">${esc(r.status)}</span></td>
+                  <td class="small muted">${esc(r.admin_note || "—")}</td>
+                  <td>${r.status === "Pending" ? `<button class="btn btn-danger btn-small" data-cancel-adm="${r.id}">Cancel</button>` : "—"}</td>
+                </tr>`).join("")}
+              </tbody>
+            </table>
+          </div>` : `<div class="card"><div class="empty">You have not submitted any IPD admission requests yet.</div></div>`;
+
+        $$("[data-cancel-adm]", admHost).forEach(btn => btn.addEventListener("click", () => {
+          confirmModal("Cancel admission request", "Are you sure you want to cancel this pending IPD admission request?", async () => {
+            try {
+              await api(`/api/ipd/admissions/${btn.dataset.cancelAdm}`, { method: "PATCH", body: JSON.stringify({ status: "Cancelled" }) });
+              toast("Admission request cancelled.");
+              await loadIpdData();
+            } catch (err) { toast(err.message); }
+          }, "Cancel request");
+        }));
+      }
+
+      function openAdmissionModal(hospitalId, hospitalName, bedType) {
+        const hosp = state.directory.find(h => h.id === hospitalId);
+        const docs = hosp ? (hosp.doctors || []) : [];
+        openModal(`
+          <span class="kicker">IPD Admission Request</span>
+          <h2>${esc(hospitalName)}</h2>
+          <p class="small muted">Requesting a <strong>${esc(bedType)} Bed</strong>. Final admission requires hospital or administrator approval.</p>
+          <form id="admissionRequestForm">
+            <div class="grid grid-2">
+              <div class="field">
+                <label>Bed Type</label>
+                <select name="bed_type" required>
+                  ${["General", "Private", "ICU"].map(t => `<option ${t === bedType ? "selected" : ""}>${t}</option>`).join("")}
+                </select>
+              </div>
+              <div class="field">
+                <label>Preferred Admission Date</label>
+                <input name="preferred_date" type="date" min="${localDateString()}" value="${localDateString()}" required>
+              </div>
+            </div>
+            <div class="field">
+              <label>Disease or Reason for Admission</label>
+              <input name="disease_or_reason" required minlength="3" maxlength="300" placeholder="e.g. Cardiac monitoring, orthopedic recovery, fever observation">
+            </div>
+            <div class="grid grid-2">
+              <div class="field">
+                <label>Referring / Preferred Doctor (optional)</label>
+                <select name="doctor_id">
+                  <option value="">Assign on arrival</option>
+                  ${docs.map(d => `<option value="${d.id}">${esc(d.name)} (${esc(d.specialty)})</option>`).join("")}
+                </select>
+              </div>
+              <div class="field">
+                <label>Emergency Contact</label>
+                <input name="emergency_contact" maxlength="60" placeholder="Family contact name & phone">
+              </div>
+            </div>
+            <div class="field">
+              <label>Additional Clinical Notes (optional)</label>
+              <textarea name="notes" maxlength="600" placeholder="Any allergies, oxygen needs, or instructions"></textarea>
+            </div>
+            <button class="btn btn-teal btn-block" type="submit">Submit IPD admission request</button>
+          </form>
+        `);
+        $("#admissionRequestForm").addEventListener("submit", async e => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          try {
+            const res = await api("/api/ipd/admissions", {
+              method: "POST",
+              body: JSON.stringify({
+                hospital_id: hospitalId,
+                bed_type: f.get("bed_type"),
+                preferred_date: f.get("preferred_date"),
+                disease_or_reason: f.get("disease_or_reason"),
+                doctor_id: f.get("doctor_id") || null,
+                emergency_contact: f.get("emergency_contact"),
+                notes: f.get("notes"),
+              }),
+            });
+            closeModal();
+            toast(res.message);
+            await loadIpdData();
+          } catch (err) { toast(err.message); }
+        });
+      }
+
+      $("#ipdFilterForm").addEventListener("submit", e => { e.preventDefault(); loadIpdData(); });
+      await loadIpdData();
+    }
+
+    /* ---------------- Smart Search & Multi-Faceted Filters (Requirement 6) ---------------- */
+    async function renderSmartSearchPage(root) {
+      await ensureDirectoryData();
+      root.innerHTML = pageHeader(
+        "Smart Search & Filters",
+        "Filter Hospitals, Doctors, Diseases, OPD & IPD",
+        "Combine hospital name, city/location, disease, doctor name, specialization, OPD availability, IPD bed availability, and appointment date."
+      )
+        + `<section class="card">
+             <form id="smartSearchForm" class="grid grid-4">
+               <div class="field" style="margin:0"><label for="ssHospital">Hospital Name</label><input id="ssHospital" placeholder="e.g. Hassan District, Rajeev"></div>
+               <div class="field" style="margin:0"><label for="ssLocation">Hospital Location</label><input id="ssLocation" placeholder="e.g. Hassan, Bengaluru"></div>
+               <div class="field" style="margin:0"><label for="ssDisease">Disease Name</label><input id="ssDisease" placeholder="e.g. Heart Disease, Diabetes"></div>
+               <div class="field" style="margin:0"><label for="ssDoctor">Doctor Name</label><input id="ssDoctor" placeholder="e.g. Dr. Ananya"></div>
+               <div class="field" style="margin:0"><label for="ssSpec">Specialization</label><input id="ssSpec" placeholder="e.g. Cardiologist, Dermatologist"></div>
+               <div class="field" style="margin:0"><label for="ssBedType">IPD Bed Type</label>
+                 <select id="ssBedType"><option value="">Any bed type</option><option value="General">General</option><option value="Private">Private</option><option value="ICU">ICU</option></select>
+               </div>
+               <div class="field" style="margin:0"><label for="ssDate">Appointment Date</label><input id="ssDate" type="date" min="${localDateString()}"></div>
+               <div class="row" style="align-items:flex-end;padding-bottom:6px">
+                 <label class="row small"><input id="ssOpdOnly" type="checkbox"> OPD Available</label>
+                 <label class="row small"><input id="ssIpdOnly" type="checkbox"> IPD Beds Available</label>
+               </div>
+               <div class="row" style="grid-column:1 / -1;margin-top:4px">
+                 <button class="btn btn-primary" type="submit">Apply filters</button>
+                 <button class="btn btn-light" type="button" id="ssResetBtn">Reset</button>
+               </div>
+             </form>
+           </section>
+           <div id="smartSearchResults" style="margin-top:18px"></div>`;
+
+      async function runSmartSearch() {
+        const host = $("#smartSearchResults");
+        host.innerHTML = `<div class="muted">Searching records...</div>`;
+        const params = new URLSearchParams();
+        const fields = [
+          ["hospital_name", $("#ssHospital").value.trim()],
+          ["location", $("#ssLocation").value.trim()],
+          ["disease", $("#ssDisease").value.trim()],
+          ["doctor_name", $("#ssDoctor").value.trim()],
+          ["specialization", $("#ssSpec").value.trim()],
+          ["bed_type", $("#ssBedType").value],
+          ["date", $("#ssDate").value],
+        ];
+        fields.forEach(([k, v]) => { if (v) params.set(k, v); });
+        if ($("#ssOpdOnly").checked) params.set("opd_only", "1");
+        if ($("#ssIpdOnly").checked) params.set("ipd_only", "1");
+
+        try {
+          const data = await api(`/api/search?${params.toString()}`);
+          host.innerHTML = `
+            ${data.matched_disease ? `<div class="alert" style="margin-bottom:14px">Disease match: <strong>${esc(data.matched_disease.name)}</strong> &rarr; Recommended specialist: <strong>${esc(data.matched_disease.recommended_specialist)}</strong> (${esc(data.matched_disease.department)}) · Guidance only, not a diagnosis.</div>` : ""}
+            <div class="section-title"><h2>Matching Hospitals (${data.hospitals.length})</h2></div>
+            ${data.hospitals.length ? `<div class="grid grid-2">${data.hospitals.map(h => `
+              <article class="card">
+                <div class="row-between">
+                  <h3>${esc(h.name)}</h3>
+                  ${h.is_sample ? `<span class="demo-label">DEMO DATA</span>` : `<span class="small ${h.verified ? "state-ok" : "state-warn"}">${h.verified ? "Verified" : "Unverified"}</span>`}
+                </div>
+                <div class="meta-line">
+                  <span>${esc(h.city || h.address || "Location not listed")}</span>
+                  <span class="meta-sep">·</span><span>OPD Doctors Available: <strong class="mono">${h.available_doctors_count}</strong></span>
+                  <span class="meta-sep">·</span><span>IPD Beds Available: <strong class="mono">${h.total_available_beds}</strong></span>
+                </div>
+                <div class="small muted" style="margin-top:6px">Specialties: ${esc((h.specialties || []).join(", ") || "Not listed")}</div>
+                <div class="row" style="margin-top:12px">
+                  <button class="btn btn-primary btn-small" data-ss-book-hosp="${h.id}">Check OPD doctors</button>
+                  <button class="btn btn-light btn-small" data-go="ipd">View IPD beds</button>
+                </div>
+              </article>`).join("")}</div>` : `<div class="empty">No hospitals matched these filters.</div>`}
+
+            <div class="section-title"><h2>Matching Doctors (${data.doctors.length})</h2></div>
+            ${data.doctors.length ? `<div class="card table-wrap"><table>
+              <thead><tr><th>Doctor</th><th>Specialization</th><th>Hospital</th><th>Fee</th><th>OPD Status</th><th>Action</th></tr></thead>
+              <tbody>
+                ${data.doctors.map(d => {
+                  const availText = d.date
+                    ? (d.is_available_on_date ? `Available (${d.remaining_slots} slots on ${formatDate(d.date)})` : `Unavailable (${d.availability_reason})`)
+                    : `${d.availability}${d.opd_available ? "" : " · OPD Closed"}`;
+                  const isOk = d.date ? d.is_available_on_date : (d.availability === "Available" && d.opd_available);
+                  return `<tr>
+                    <td><strong>${esc(d.name)}</strong>${d.is_sample ? `<br><span class="demo-label">DEMO DATA</span>` : ""}</td>
+                    <td>${esc(d.specialty)}<br><span class="small muted">${esc(d.department)}</span></td>
+                    <td>${esc(d.hospital_name)}<br><span class="small muted">${esc(d.hospital_city || "")}</span></td>
+                    <td class="mono">${esc(formatFee(d.consultation_fee))}</td>
+                    <td><span class="small ${isOk ? "state-ok" : "state-bad"}">${esc(availText)}</span></td>
+                    <td><button class="btn btn-primary btn-small" data-ss-book-doc="${d.id}" data-ss-hosp="${d.hospital_id}">Check slots</button></td>
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table></div>` : `<div class="empty">No doctors matched these filters.</div>`}`;
+
+          $$("[data-ss-book-hosp]", host).forEach(b => b.addEventListener("click", () => goToBooking({ hospital_id: b.dataset.ssBookHosp, date: $("#ssDate").value })));
+          $$("[data-ss-book-doc]", host).forEach(b => b.addEventListener("click", () => goToBooking({ hospital_id: b.dataset.ssHosp, doctor_id: b.dataset.ssBookDoc, date: $("#ssDate").value })));
+          bindPageActions(host);
+        } catch (err) {
+          host.innerHTML = `<div class="alert alert-danger">${esc(err.message)}</div>`;
+        }
+      }
+
+      $("#smartSearchForm").addEventListener("submit", e => { e.preventDefault(); runSmartSearch(); });
+      $("#ssResetBtn").addEventListener("click", () => { $("#smartSearchForm").reset(); runSmartSearch(); });
+      await runSmartSearch();
+    }
+
+    /* ---------------- Existing Symptom + Map + OSRM Directions (Preserved 100%) ---------------- */
+    const symptomOptions = ["child health concern", "pregnancy concern", "chest pain", "difficulty breathing", "shortness of breath", "severe bleeding", "unconscious", "seizure", "face drooping", "suicidal thoughts", "fever", "cough", "sore throat", "stomach pain", "fatigue", "rash", "itching", "skin changes", "headache", "dizziness", "numbness", "joint pain", "back pain", "bone pain", "injury", "palpitations"];
+    const kannadaSymptoms = {
+      "child health concern": "ಮಕ್ಕಳ ಆರೋಗ್ಯ ಕಾಳಜಿ", "pregnancy concern": "ಗರ್ಭಧಾರಣೆಯ ಕಾಳಜಿ", "chest pain": "ಎದೆ ನೋವು",
+      "difficulty breathing": "ಉಸಿರಾಟದ ತೊಂದರೆ", "shortness of breath": "ಉಸಿರಾಟದ ಕೊರತೆ", "severe bleeding": "ತೀವ್ರ ರಕ್ತಸ್ರಾವ",
+      "unconscious": "ಪ್ರಜ್ಞಾಹೀನತೆ", "seizure": "ಸೆಳೆತ", "face drooping": "ಮುಖದ ಒಂದು ಭಾಗ ಜೋಲು",
+      "suicidal thoughts": "ಆತ್ಮಹತ್ಯೆಯ ಆಲೋಚನೆಗಳು", "fever": "ಜ್ವರ", "cough": "ಕೆಮ್ಮು", "sore throat": "ಗಂಟಲು ನೋವು",
+      "stomach pain": "ಹೊಟ್ಟೆ ನೋವು", "fatigue": "ಆಯಾಸ", "rash": "ಚರ್ಮದ ದದ್ದು", "itching": "ತುರಿಕೆ",
+      "skin changes": "ಚರ್ಮದ ಬದಲಾವಣೆಗಳು", "headache": "ತಲೆನೋವು", "dizziness": "ತಲೆಸುತ್ತು", "numbness": "ಮರಗಟ್ಟುವಿಕೆ",
+      "joint pain": "ಕೀಲು ನೋವು", "back pain": "ಬೆನ್ನು ನೋವು", "bone pain": "ಮೂಳೆ ನೋವು", "injury": "ಗಾಯ", "palpitations": "ಹೃದಯ ಬಡಿತದ ಅಸಾಮಾನ್ಯತೆ",
+    };
+    const symptomLabel = s => state.language === "kn" ? (kannadaSymptoms[s] || s) : s.replace(/\b\w/g, x => x.toUpperCase());
+
+    function renderFindPage(root) {
+      root.innerHTML = pageHeader("Nearby Care Discovery & Map", t("findTitle"), "A symptom-based starting point with OpenStreetMap discovery and OSRM driving routes — not a diagnosis.")
+        + `<div class="grid grid-2">
+             <section class="card">
+               <span class="kicker">Step 1 · Location</span>
+               <h2>${t("location")}</h2>
+               <div class="location-panel">
+                 <div class="field"><label for="locationSearch">City or area</label><input id="locationSearch" placeholder="e.g. Hassan, Bengaluru"></div>
+                 <button id="locationSearchBtn" class="btn btn-light btn-small">Search</button>
+                 <button id="gpsBtn" class="btn btn-teal btn-small">GPS</button>
+               </div>
+               <div class="small muted">Current: <strong id="findLocationLabel">${esc(state.location?.display_name || "Not set — choose GPS or search")}</strong></div>
+             </section>
+             <section class="card">
+               <span class="kicker">Step 2 · Symptoms</span>
+               <h2>${t("symptomsTitle")}</h2>
+               <form id="symptomForm">
+                 <div class="symptom-grid">${symptomOptions.map(s => `<label class="symptom-option"><input type="checkbox" name="symptoms" value="${esc(s)}"><span>${esc(symptomLabel(s))}</span></label>`).join("")}</div>
+                 <div class="grid grid-2" style="margin-top:10px">
+                   <div class="field"><label for="duration">Duration (days)</label><input id="duration" type="number" min="1" max="3650" value="2" required></div>
+                   <div class="field"><label for="severity">Severity (1–5): <span id="severityValue">3</span></label><input id="severity" type="range" min="1" max="5" value="3"></div>
+                 </div>
+                 <button class="btn btn-primary btn-block" type="submit">${t("searchCare")}</button>
+               </form>
+             </section>
+           </div>
+           <div class="row" style="margin-top:12px">
+             <button id="browseNearbyBtn" class="btn btn-light">Browse nearby without sharing symptoms</button>
+             <span class="small muted">Skips specialist matching.</span>
+           </div>
+           <div id="emergencyNotice"></div>
+           <div id="recommendationIntro"></div>
+           <div class="section-title"><h2>Nearby Hospitals Map</h2><span class="small muted">OpenStreetMap + Platform Listings</span></div>
+           <div class="card"><div id="map" role="application" aria-label="Map of nearby hospitals"></div></div>
+           <div class="row" style="margin-top:14px">
+             <div class="field" style="flex:1;min-width:220px;margin:0"><label for="facilityFilter">Filter nearby facilities</label><input id="facilityFilter" type="search" placeholder="Search hospital, area or specialty"></div>
+             <label class="row small" style="padding-top:18px"><input id="emergencyFilter" type="checkbox"> Emergency services listed</label>
+           </div>
+           <div id="hospitalResults" class="stack" style="margin-top:14px"><div class="empty">Choose a location and share symptoms (or browse nearby) to view hospitals.</div></div>
+           <div id="compareArea"></div>`;
+
+      bindLocationActions(root);
+      initMap();
+      $("#severity").addEventListener("input", e => $("#severityValue").textContent = e.target.value);
+      $("#symptomForm").addEventListener("submit", submitSymptoms);
+      $("#browseNearbyBtn").addEventListener("click", browseNearby);
+      $("#facilityFilter").addEventListener("input", renderHospitals);
+      $("#emergencyFilter").addEventListener("change", renderHospitals);
+      if (state.hospitals.length) renderHospitals();
+    }
+
+    async function submitSymptoms(e) {
+      e.preventDefault();
+      if (!state.location) { toast("Choose a location before searching nearby care."); return; }
+      const symptoms = $$('input[name="symptoms"]:checked', e.currentTarget).map(i => i.value);
+      if (!symptoms.length) { toast("Select at least one symptom."); return; }
+      const btn = $("button[type=submit]", e.currentTarget);
+      btn.disabled = true; btn.textContent = "Searching...";
+      try {
+        const data = await api("/api/recommendations", {
+          method: "POST",
+          body: JSON.stringify({
+            symptoms, duration_days: Number($("#duration").value), severity: Number($("#severity").value),
+            latitude: state.location.latitude, longitude: state.location.longitude,
+          }),
+        });
+        state.hospitals = data.hospitals; state.specialist = data.specialist; state.compare.clear();
+        $("#emergencyNotice").innerHTML = data.emergency ? `<div class="alert alert-danger" style="margin-top:14px"><strong>Emergency Warning:</strong> ${esc(data.emergency_message)}</div>` : "";
+        $("#recommendationIntro").innerHTML = `<div class="card" style="margin-top:14px"><span class="kicker">Suggested Specialist · Not a Diagnosis</span><h2>${esc(data.specialist)}</h2><p class="muted">${esc(data.explanation)}</p><p class="small muted">${esc(data.score_explanation)}</p>${data.warning ? `<div class="alert">${esc(data.warning)}</div>` : ""}</div>`;
+        renderHospitals(); showMap();
+      } catch (err) { toast(err.message); }
+      finally { btn.disabled = false; btn.textContent = t("searchCare"); }
+    }
+
+    async function browseNearby(e) {
+      if (!state.location) { toast("Choose a location first."); return; }
+      const btn = e.currentTarget; btn.disabled = true; btn.textContent = "Loading...";
+      try {
+        const data = await api(`/api/hospitals/nearby?latitude=${state.location.latitude}&longitude=${state.location.longitude}`);
+        state.hospitals = data.hospitals; state.specialist = ""; state.compare.clear();
+        $("#emergencyNotice").innerHTML = "";
+        $("#recommendationIntro").innerHTML = `<div class="card" style="margin-top:14px"><span class="kicker">Nearby Listings</span><p>${esc(data.explanation)}</p>${data.warning ? `<div class="alert">${esc(data.warning)}</div>` : ""}</div>`;
+        renderHospitals(); showMap();
+      } catch (err) { toast(err.message); }
+      finally { btn.disabled = false; btn.textContent = "Browse nearby without sharing symptoms"; }
+    }
+
+    function initMap() {
+      if (!window.L) { $("#map").innerHTML = `<div class="empty">Map tiles unavailable.</div>`; return; }
+      if (state.map) { state.map.remove(); state.map = null; state.markers = null; state.routeLayer = null; }
+      state.map = L.map("map", { scrollWheelZoom: false }).setView([state.location?.latitude || 13.0068, state.location?.longitude || 76.0996], state.location ? 12 : 7);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }).addTo(state.map);
+      state.markers = L.layerGroup().addTo(state.map);
+      setTimeout(() => state.map.invalidateSize(), 120);
+      if (state.location) showMap();
+    }
+
+    function showMap() {
+      if (!state.map || !state.markers || !state.location) return;
+      state.markers.clearLayers();
+      if (state.routeLayer) { state.map.removeLayer(state.routeLayer); state.routeLayer = null; }
+      const bounds = [[state.location.latitude, state.location.longitude]];
+      L.marker([state.location.latitude, state.location.longitude]).bindPopup("<strong>Your selected location</strong>").addTo(state.markers);
+      state.hospitals.forEach(h => {
+        if (h.latitude == null || h.longitude == null) return;
+        L.marker([h.latitude, h.longitude]).bindPopup(`<strong>${esc(h.name)}</strong><br>${esc(h.address)}`).addTo(state.markers);
+        bounds.push([h.latitude, h.longitude]);
+      });
+      if (bounds.length > 1) state.map.fitBounds(bounds, { padding: [22, 22], maxZoom: 13 });
+      else state.map.setView([state.location.latitude, state.location.longitude], 13);
+      setTimeout(() => state.map.invalidateSize(), 120);
+    }
+
+    function availableDoctorCount(h) { return (h.doctors || []).filter(d => d.availability === "Available").length; }
+
+    function renderHospitals() {
+      const results = $("#hospitalResults"); if (!results) return;
+      if (!state.hospitals.length) { results.innerHTML = `<div class="empty">No nearby listings found within 15 km.</div>`; return; }
+      const q = ($("#facilityFilter")?.value || "").trim().toLowerCase();
+      const emerg = $("#emergencyFilter")?.checked || false;
+      const matching = state.hospitals.filter(h => {
+        const text = [h.name, h.address, h.area, h.city, ...(h.specialties || [])].join(" ").toLowerCase();
+        return (!q || text.includes(q)) && (!emerg || h.emergency_services);
+      });
+      if (!matching.length) { results.innerHTML = `<div class="empty">No facilities match your filter.</div>`; renderComparison(); return; }
+      results.innerHTML = matching.map(h => {
+        const id = String(h.id), score = Number(h.match_score) || 0;
+        const img = h.photo_url ? `<img class="hospital-photo" src="${esc(h.photo_url)}" alt="${esc(h.name)}">` : `<span>+</span><small>Hospital</small>`;
+        return `<article class="hospital-card">
+          <div class="hospital-image">${img}</div>
+          <div>
+            <h3>${esc(h.name)}</h3>
+            <div class="meta-line">
+              <span class="${h.verified ? "state-ok" : "muted"}">${h.verified ? "Verified profile" : "Unverified listing"}</span>
+              ${h.is_sample ? `<span class="meta-sep">·</span><span class="demo-label">DEMO DATA</span>` : ""}
+              <span class="meta-sep">·</span><span>${esc(h.distance_km)} km straight-line</span>
+              ${h.phone ? `<span class="meta-sep">·</span><span>${esc(h.phone)}</span>` : ""}
+            </div>
+            <div class="small muted">${esc(h.address || "Address not listed")} · ${esc(h.source || "")}</div>
+            <div class="match-meter"><strong class="small mono">${score}/100 match</strong><span class="meter"><i style="width:${Math.max(4, score)}%"></i></span></div>
+            <div class="small muted">Specialties: ${esc((h.specialties || []).join(", ") || "Not listed")} · Available OPD doctors: ${availableDoctorCount(h)}</div>
+          </div>
+          <div><label class="small row"><input class="compare-toggle" type="checkbox" data-id="${esc(id)}" ${state.compare.has(id) ? "checked" : ""}> Compare</label></div>
+          <div class="hospital-actions">
+            <button class="btn btn-primary btn-small" data-action="details" data-id="${esc(id)}">View doctors &amp; details</button>
+            ${typeof h.id === "number" ? `<button class="btn btn-teal btn-small" data-action="book" data-id="${esc(id)}">Check OPD slots</button>` : ""}
+            <button class="btn btn-light btn-small" data-action="directions" data-id="${esc(id)}">Directions</button>
+            ${typeof h.id === "number" ? `<button class="btn btn-light btn-small" data-action="favorite" data-id="${esc(id)}">Save</button>` : ""}
+            ${h.osm_url ? `<a class="btn btn-quiet btn-small" href="${esc(h.osm_url)}" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>` : ""}
+          </div>
+        </article>`;
+      }).join("");
+
+      results.onclick = e => {
+        const cb = e.target.closest(".compare-toggle");
+        if (cb) {
+          if (cb.checked) {
+            if (state.compare.size >= 3) { cb.checked = false; toast("Compare up to 3 hospitals."); return; }
+            state.compare.add(cb.dataset.id);
+          } else state.compare.delete(cb.dataset.id);
+          renderComparison(); return;
+        }
+        const btn = e.target.closest("[data-action]"); if (!btn) return;
+        const h = state.hospitals.find(x => String(x.id) === btn.dataset.id); if (!h) return;
+        if (btn.dataset.action === "details") showHospitalDetails(h);
+        if (btn.dataset.action === "book") goToBooking({ hospital_id: h.id });
+        if (btn.dataset.action === "directions") getDirections(h);
+        if (btn.dataset.action === "favorite") saveHospital(h);
+      };
+      renderComparison();
+    }
+
+    function renderComparison() {
+      const host = $("#compareArea"); if (!host) return;
+      const sel = state.hospitals.filter(h => state.compare.has(String(h.id)));
+      host.innerHTML = sel.length ? `<div class="section-title"><h2>Hospital Comparison (${sel.length}/3)</h2></div><div class="card table-wrap"><table><thead><tr><th>Hospital</th><th>Distance</th><th>Match</th><th>Verified</th><th>Emergency</th><th>Available Doctors</th></tr></thead><tbody>${sel.map(h => `<tr><td>${esc(h.name)}</td><td class="mono">${esc(h.distance_km)} km</td><td class="mono">${esc(h.match_score)}/100</td><td>${h.verified ? "Yes" : "No"}</td><td>${h.emergency_services ? "Listed" : "Unknown"}</td><td class="mono">${availableDoctorCount(h)}</td></tr>`).join("")}</tbody></table></div>` : "";
+    }
+
+    function showHospitalDetails(h) {
+      const docs = h.doctors || [];
+      openModal(`
+        <span class="kicker">Hospital Details</span>
+        <h2>${esc(h.name)}</h2>
+        <p class="small muted">${esc(h.address)} · ${esc(h.distance_km)} km straight-line</p>
+        <div class="section-title"><h2>Listed Doctors</h2></div>
+        <div class="stack">${docs.length ? docs.map(d => doctorCard(d, false)).join("") : `<div class="empty">No platform doctor records listed for this facility.</div>`}</div>
+      `);
+    }
+
+    function doctorCard(d, editable = false) {
+      const photo = d.photo_url ? `<img class="doctor-photo" src="${esc(d.photo_url)}" alt="${esc(d.name)}" loading="lazy">` : `<div class="doctor-photo">${esc(initials(d.name))}</div>`;
+      return `<article class="doctor-card" data-doctor="${esc(d.id)}">
+        ${photo}
+        <div class="doctor-info">
+          <h4>${esc(d.name)} ${d.is_sample ? `<span class="demo-label">· DEMO</span>` : ""}</h4>
+          <div class="meta-line">
+            <span>${esc(d.qualification || "Qualified Specialist")}</span><span class="meta-sep">·</span>
+            <span>${esc(d.specialty)} (${esc(d.department)})</span><span class="meta-sep">·</span>
+            <span class="mono">${esc(formatFee(d.consultation_fee))}</span>
+          </div>
+          <div class="meta-line">
+            <span class="${stateClass(d.availability)}">${esc(d.availability || "Unavailable")}</span>
+            <span class="meta-sep">·</span><span>${esc(d.consultation_timings || "No timings listed")}</span>
+          </div>
+        </div>
+        ${editable ? `<div class="doctor-controls">
+          <label class="small">Availability <select data-status-doctor="${esc(d.id)}">${["Available", "Busy", "On Break", "Unavailable"].map(s => `<option ${d.availability === s ? "selected" : ""}>${s}</option>`).join("")}</select></label>
+          <button class="btn btn-light btn-small" data-edit-doctor="${esc(d.id)}">Edit</button>
+          <button class="btn btn-teal btn-small" data-sched-doctor="${esc(d.id)}">OPD Schedule</button>
+          <button class="btn btn-danger btn-small" data-delete-doctor="${esc(d.id)}">Remove</button>
+        </div>` : `<div class="doctor-controls">
+          <button class="btn btn-primary btn-small" data-book-doctor="${esc(d.id)}" data-hospital-id="${esc(d.hospital_id)}">Check OPD slots</button>
+        </div>`}
+      </article>`;
+    }
+
+    async function getDirections(h) {
+      if (!state.location) { toast("Set your location first."); return; }
+      const gUrl = mode => `https://www.google.com/maps/dir/?api=1&origin=${state.location.latitude},${state.location.longitude}&destination=${h.latitude},${h.longitude}&travelmode=${mode}`;
+      try {
+        const route = await api(`/api/route?start_lat=${state.location.latitude}&start_lon=${state.location.longitude}&end_lat=${h.latitude}&end_lon=${h.longitude}`);
+        if (state.routeLayer) state.map.removeLayer(state.routeLayer);
+        state.routeLayer = L.geoJSON(route.geometry, { style: { color: "#226ad4", weight: 5, opacity: 0.85 } }).addTo(state.map);
+        state.map.fitBounds(state.routeLayer.getBounds(), { padding: [25, 25] });
+        openModal(`<span class="kicker">Driving Directions · OSRM</span><h2>${esc(h.name)}</h2><div class="grid grid-2" style="margin:14px 0"><div class="card"><strong class="mono">${esc(route.distance_km)} km</strong><div class="small muted">Road distance</div></div><div class="card"><strong class="mono">${esc(route.duration_minutes)} min</strong><div class="small muted">Estimated driving time</div></div></div><div class="row"><a class="btn btn-primary" href="${esc(gUrl("driving"))}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`);
+      } catch (err) {
+        openModal(`<span class="kicker">Directions</span><h2>${esc(h.name)}</h2><div class="alert">${esc(err.message)}</div><div class="row" style="margin-top:12px"><a class="btn btn-primary" href="${esc(gUrl("driving"))}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a></div>`);
+      }
+    }
+
+    async function saveHospital(h) {
+      try { await api(`/api/favourites/${h.id}`, { method: "POST", body: "{}" }); toast("Hospital saved to favourites."); }
+      catch (err) { toast(err.message); }
+    }
+
+    function startDoctorPolling() {
+      state.doctorSince = new Date(Date.now() - 60000).toISOString();
+      state.updateTimer = setInterval(async () => {
+        try {
+          const res = await api(`/api/doctors/updates?since=${encodeURIComponent(state.doctorSince)}`);
+          if (res.updates.length) {
+            state.doctorSince = res.server_time;
+            toast(`Doctor availability updated: ${res.updates.map(u => `${u.name} (${u.status})`).join(", ")}`);
+          } else state.doctorSince = res.server_time;
+        } catch (_e) {}
+      }, 15000);
+    }
+
+    /* ---------------- Patient Appointments (Requirement 4) ---------------- */
+    async function renderPatientAppointments(root) {
+      const data = await api("/api/appointments");
+      const items = data.appointments || [];
+      root.innerHTML = pageHeader(
+        "Your Visits",
+        t("appointments"),
+        "View unique appointment IDs, full details, confirmation status, and cancel active bookings.",
+        `<button class="btn btn-primary" data-go="opd">Book new OPD appointment</button>`
+      )
+        + `<div class="card">${items.length ? `<div class="table-wrap"><table>
+            <thead><tr><th>Appointment ID</th><th>Doctor &amp; Dept</th><th>Hospital</th><th>Date &amp; Time</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${items.map(a => `<tr>
+                <td class="code-text">${esc(a.appointment_code || `#${a.id}`)}</td>
+                <td><strong>${esc(a.doctor_name)}</strong><br><span class="small muted">${esc(a.department || a.specialty)}${a.disease_name ? ` · ${esc(a.disease_name)}` : ""}</span></td>
+                <td>${esc(a.hospital_name)}<br><span class="small muted">${esc(a.hospital_city || a.hospital_address || "")}</span></td>
+                <td class="mono">${formatDate(a.appointment_date)}<br>${esc(a.appointment_time)}</td>
+                <td class="mono">${esc(formatFee(a.consultation_fee))}</td>
+                <td><span class="${stateClass(a.status)}">${esc(formatStatusLabel(a.status))}</span></td>
+                <td class="row">
+                  <button class="btn btn-light btn-small" data-view-appt="${a.id}">Details</button>
+                  ${["pending", "confirmed", "accepted", "rescheduled"].includes(a.status) ? `<button class="btn btn-danger btn-small" data-cancel-appt="${a.id}">Cancel</button>` : ""}
+                </td>
+              </tr>`).join("")}
+            </tbody>
+          </table></div>` : `<div class="empty">No appointments yet. Go to OPD &amp; Booking to book an available doctor slot.</div>`}</div>`;
+
+      bindPageActions(root);
+      root.addEventListener("click", async e => {
+        const viewBtn = e.target.closest("[data-view-appt]");
+        if (viewBtn) {
+          try {
+            const res = await api(`/api/appointments/${viewBtn.dataset.viewAppt}`);
+            const a = res.appointment;
+            openModal(`
+              <span class="kicker">OPD Appointment Details</span>
+              <h2>${esc(a.appointment_code || `#${a.id}`)}</h2>
+              <div class="divider-list small" style="margin-top:10px">
+                <div class="row-between"><span class="muted">Status</span><strong class="${stateClass(a.status)}">${esc(formatStatusLabel(a.status))}</strong></div>
+                <div class="row-between"><span class="muted">Hospital</span><strong>${esc(a.hospital_name)}</strong></div>
+                <div class="row-between"><span class="muted">Hospital Address</span><span>${esc(a.hospital_address || a.hospital_city || "—")}</span></div>
+                <div class="row-between"><span class="muted">Doctor</span><strong>${esc(a.doctor_name)} (${esc(a.specialty)})</strong></div>
+                <div class="row-between"><span class="muted">Department / Disease</span><span>${esc(a.department || a.specialty)}${a.disease_name ? ` · ${esc(a.disease_name)}` : ""}</span></div>
+                <div class="row-between"><span class="muted">Date &amp; Time</span><strong class="mono">${formatDate(a.appointment_date)} at ${esc(a.appointment_time)}</strong></div>
+                <div class="row-between"><span class="muted">Consultation Fee</span><strong class="mono">${esc(formatFee(a.consultation_fee))}</strong></div>
+                <div class="row-between"><span class="muted">Patient Note</span><span>${esc(a.note || "None")}</span></div>
+              </div>
+            `);
+          } catch (err) { toast(err.message); }
+          return;
+        }
+        const cancelBtn = e.target.closest("[data-cancel-appt]");
+        if (cancelBtn) {
+          confirmModal("Cancel appointment", "Are you sure you want to cancel this appointment? The time slot will be released for other patients.", async () => {
+            try {
+              await api(`/api/appointments/${cancelBtn.dataset.cancelAppt}`, { method: "PATCH", body: "{}" });
+              toast("Appointment cancelled and slot released.");
+              renderPatientAppointments(root);
+            } catch (err) { toast(err.message); }
+          }, "Cancel appointment");
+        }
+      });
+    }
+
+    /* ---------------- Patient Health, Prescriptions & Feedback (Preserved) ---------------- */
+    async function renderHealth(root) {
+      const data = await api("/api/profile");
+      state.profile = data;
+      const p = data.patient || {};
+      root.innerHTML = pageHeader("Private Health Profile", t("health"), "Manage your patient profile, medical history, private prescription files, and saved hospitals.")
+        + `<section class="card" style="margin-bottom:16px">
+             <h2>Patient Account &amp; Profile</h2>
+             <form id="patientProfileForm" class="grid grid-3">
+               <div class="field"><label>Full name</label><input name="full_name" required maxlength="100" value="${esc(data.account.full_name)}"></div>
+               <div class="field"><label>Email</label><input name="email" type="email" required value="${esc(data.account.email)}"></div>
+               <div class="field"><label>Phone</label><input name="phone" maxlength="20" value="${esc(data.account.phone || "")}"></div>
+               <div class="field"><label>Age</label><input name="age" type="number" min="0" max="130" value="${p.age ?? ""}"></div>
+               <div class="field"><label>Gender</label><select name="gender"><option value="">Prefer not to say</option>${["Female", "Male", "Other"].map(g => `<option ${p.gender === g ? "selected" : ""}>${g}</option>`).join("")}</select></div>
+               <div class="field"><label>Blood Group</label><input name="blood_group" maxlength="10" placeholder="e.g. O+" value="${esc(p.blood_group || "")}"></div>
+               <div class="field"><label>Emergency Contact</label><input name="emergency_contact" maxlength="60" value="${esc(p.emergency_contact || "")}"></div>
+               <div class="field" style="grid-column:span 2"><label>Address</label><input name="address" maxlength="240" value="${esc(p.address || "")}"></div>
+               <div class="field"><label>Current password (to change)</label><input name="current_password" type="password"></div>
+               <div class="field"><label>New password (10+ chars)</label><input name="new_password" type="password" minlength="10"></div>
+               <div style="display:flex;align-items:flex-end;padding-bottom:11px"><button class="btn btn-primary">Save profile</button></div>
+             </form>
+           </section>
+           <section class="card" style="margin-bottom:16px">
+             <h2>Accessibility</h2>
+             <div class="row">
+               <label class="row small"><input id="largeTextToggle" type="checkbox" ${accessibility.largeText ? "checked" : ""}> Larger text</label>
+               <label class="row small"><input id="highContrastToggle" type="checkbox" ${accessibility.highContrast ? "checked" : ""}> High contrast</label>
+             </div>
+           </section>
+           <div class="grid grid-2">
+             <section class="card">
+               <h2>Add Health Note</h2>
+               <form id="historyForm">
+                 <div class="field"><label>Condition</label><input id="historyCondition" required maxlength="120"></div>
+                 <div class="field"><label>Details</label><textarea id="historyDetails" maxlength="1000"></textarea></div>
+                 <div class="field"><label>Allergies</label><input id="historyAllergies" maxlength="500"></div>
+                 <button class="btn btn-primary">Save note</button>
+               </form>
+             </section>
+             <section class="card">
+               <h2>Prescription Files</h2>
+               <p class="small muted">PDF, JPG, or PNG · 5 MB max. Private to your account.</p>
+               <form id="prescriptionForm" class="row"><input id="prescriptionFile" type="file" accept=".pdf,.jpg,.jpeg,.png" required><button class="btn btn-light">Upload</button></form>
+               <div class="divider-list" style="margin-top:12px">${data.prescriptions.length ? data.prescriptions.map(pr => `<div class="row-between"><span>${esc(pr.original_name)} <span class="small muted">· ${formatDate(pr.uploaded_at)}</span></span><a class="btn btn-quiet btn-small" href="/api/prescriptions/${pr.id}" target="_blank">Download</a></div>`).join("") : `<div class="small muted">No files uploaded.</div>`}</div>
+             </section>
+           </div>
+           <div class="section-title"><h2>Medical History</h2></div>
+           <div class="grid grid-2">${data.history.length ? data.history.map(h => `<article class="card"><h3>${esc(h.condition)}</h3><p class="small muted">${esc(h.details || "No details.")}</p><div class="small"><strong>Allergies:</strong> ${esc(h.allergies || "None")} · ${formatDate(h.created_at)}</div></article>`).join("") : `<div class="empty">No medical history notes saved.</div>`}</div>
+           <div class="section-title"><h2>Saved Hospitals &amp; Notifications</h2></div>
+           <div class="grid grid-2">
+             <div class="card">${data.favourites.length ? `<div class="divider-list">${data.favourites.map(h => `<div class="row-between"><div><strong>${esc(h.name)}</strong><div class="small muted">${esc(h.address)}</div></div><button class="btn btn-danger btn-small" data-unfavorite="${h.id}">Remove</button></div>`).join("")}</div>` : `<div class="empty">No saved hospitals.</div>`}</div>
+             <div class="card">${data.notifications.length ? `<div class="divider-list">${data.notifications.slice(0, 8).map(n => `<div class="small">${esc(n.message)} <span class="muted">· ${formatDate(n.created_at)}</span></div>`).join("")}</div>` : `<div class="empty">No notifications yet.</div>`}</div>
+           </div>`;
+
+      $("#patientProfileForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        try {
+          const res = await api("/api/profile", { method: "PUT", body: JSON.stringify(Object.fromEntries(f.entries())) });
+          state.user = { ...state.user, ...res.user };
+          mountShell();
+          toast("Profile updated.");
+        } catch (err) { toast(err.message); }
+      });
+      $("#largeTextToggle").addEventListener("change", e => { accessibility.largeText = e.target.checked; localStorage.setItem("carepath-large-text", String(accessibility.largeText)); applyAccessibility(); });
+      $("#highContrastToggle").addEventListener("change", e => { accessibility.highContrast = e.target.checked; localStorage.setItem("carepath-high-contrast", String(accessibility.highContrast)); applyAccessibility(); });
+      $("#historyForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        try { await api("/api/medical-history", { method: "POST", body: JSON.stringify({ condition: $("#historyCondition").value, details: $("#historyDetails").value, allergies: $("#historyAllergies").value }) }); toast("Health note saved."); renderHealth(root); }
+        catch (err) { toast(err.message); }
+      });
+      $("#prescriptionForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const fd = new FormData(); fd.append("file", $("#prescriptionFile").files[0]);
+        try { await api("/api/prescriptions", { method: "POST", body: fd }); toast("Prescription uploaded."); renderHealth(root); }
+        catch (err) { toast(err.message); }
+      });
+      root.addEventListener("click", async e => {
+        const b = e.target.closest("[data-unfavorite]"); if (!b) return;
+        try { await api(`/api/favourites/${b.dataset.unfavorite}`, { method: "DELETE" }); toast("Removed from favourites."); renderHealth(root); }
+        catch (err) { toast(err.message); }
+      });
+    }
+
+    async function renderFeedback(root) {
+      await ensureDirectoryData();
+      root.innerHTML = pageHeader("Quality & Trust", t("feedback"), "Feedback is marked visit-verified only when matched to a confirmed or completed appointment.")
+        + `<div class="grid grid-2">
+             <section class="card">
+               <h2>Share Hospital Feedback</h2>
+               <form id="feedbackForm">
+                 <div class="field"><label>Hospital</label><select id="feedbackHospital" required><option value="">Select a hospital</option>${state.directory.map(h => `<option value="${h.id}">${esc(h.name)}</option>`).join("")}</select></div>
+                 <div class="field"><label>Rating</label><select id="feedbackRating"><option value="5">5 — Excellent</option><option value="4">4 — Good</option><option value="3">3 — Okay</option><option value="2">2 — Poor</option><option value="1">1 — Very poor</option></select></div>
+                 <div class="field"><label>Comments</label><textarea id="feedbackComment" maxlength="1000"></textarea></div>
+                 <button class="btn btn-primary">Submit feedback</button>
+               </form>
+               <div id="feedbackMessage" class="small muted" style="margin-top:10px"></div>
+             </section>
+             <section class="card">
+               <h2>Report Incorrect Information</h2>
+               <form id="reportForm">
+                 <div class="field"><label>Hospital (optional)</label><select id="reportHospital"><option value="">General report</option>${state.directory.map(h => `<option value="${h.id}">${esc(h.name)}</option>`).join("")}</select></div>
+                 <div class="field"><label>What should be corrected?</label><textarea id="reportMessage" required minlength="5" maxlength="1000"></textarea></div>
+                 <button class="btn btn-light">Send report</button>
+               </form>
+             </section>
+           </div>`;
+      $("#feedbackForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        try {
+          const res = await api("/api/feedback", { method: "POST", body: JSON.stringify({ hospital_id: $("#feedbackHospital").value, rating: $("#feedbackRating").value, comment: $("#feedbackComment").value }) });
+          $("#feedbackMessage").textContent = res.verified_visit ? "Feedback saved as visit-verified." : "Feedback saved (not visit-verified).";
+          toast("Thank you for your feedback.");
+        } catch (err) { toast(err.message); }
+      });
+      $("#reportForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        try { await api("/api/reports", { method: "POST", body: JSON.stringify({ hospital_id: $("#reportHospital").value || null, message: $("#reportMessage").value }) }); toast("Report submitted."); $("#reportForm").reset(); }
+        catch (err) { toast(err.message); }
+      });
+    }
+
+    /* =====================================================================
+       HOSPITAL STAFF WORKSPACE
+       ===================================================================== */
+
+    function renderHospitalOverview(root) {
+      const d = state.hospitalData, c = d.stats.availability;
+      root.innerHTML = pageHeader("Hospital Operations", d.hospital.name, "Manage OPD doctors, schedules, appointment confirmations, and IPD bed availability.")
+        + (d.hospital.is_sample ? `<div class="alert alert-warning" style="margin-bottom:14px"><strong>Demo Hospital Account:</strong> Records here are clearly labeled as demo data.</div>` : "")
+        + `<div class="grid grid-4">
+             ${stat(d.stats.total_doctors, "Assigned doctors")}
+             ${stat(c.Available || 0, "Doctors available")}
+             ${stat(d.stats.today_appointments, "Today's OPD requests")}
+             ${stat(d.stats.available_beds || 0, "Available IPD beds")}
+           </div>
+           <div class="grid grid-3" style="margin-top:16px">
+             <article class="card"><h3>OPD Doctors &amp; Schedules</h3><p class="small muted">Set consultation fees, weekly OPD time windows, and live availability.</p><button class="btn btn-primary btn-small" data-go="doctors">Manage doctors</button></article>
+             <article class="card"><h3>OPD Appointments</h3><p class="small muted">Confirm, reschedule, or complete incoming patient appointments.</p><button class="btn btn-light btn-small" data-go="requests">Manage appointments</button></article>
+             <article class="card"><h3>IPD Beds &amp; Admissions</h3><p class="small muted">${d.stats.pending_admissions || 0} pending admission request(s).</p><button class="btn btn-teal btn-small" data-go="ipd">Manage IPD beds</button></article>
+           </div>`;
+      bindPageActions(root);
+    }
+
+    function renderHospitalProfile(root) {
+      const h = state.hospitalData.hospital;
+      root.innerHTML = pageHeader("Facility Information", t("profile"), "Keep hospital location, specialties, OPD/IPD flags, and contact information current.")
+        + `<section class="card" style="max-width:860px">
+             <form id="hospitalProfileForm" class="grid grid-2">
+               <div class="field"><label>Hospital name</label><input name="name" required maxlength="140" value="${esc(h.name)}"></div>
+               <div class="field"><label>Contact phone</label><input name="phone" maxlength="30" value="${esc(h.phone)}"></div>
+               <div class="field"><label>Address</label><input name="address" maxlength="300" value="${esc(h.address)}"></div>
+               <div class="field"><label>Area</label><input name="area" maxlength="100" value="${esc(h.area)}"></div>
+               <div class="field"><label>City</label><input name="city" maxlength="100" value="${esc(h.city)}"></div>
+               <div class="field"><label>OPD Timings</label><input name="opd_timings" maxlength="160" value="${esc(h.opd_timings || "")}" placeholder="e.g. Mon–Sat, 09:00 AM – 05:00 PM"></div>
+               <div class="field"><label>Specialties (comma-separated)</label><input name="specialties" value="${esc((h.specialties || []).join(", "))}"></div>
+               <div class="field"><label>Facilities (comma-separated)</label><input name="facilities" value="${esc((h.facilities || []).join(", "))}"></div>
+               <div class="field"><label>Latitude</label><input name="latitude" type="number" step="any" value="${h.latitude ?? ""}"></div>
+               <div class="field"><label>Longitude</label><input name="longitude" type="number" step="any" value="${h.longitude ?? ""}"></div>
+               <div class="field"><label>Hospital Photo (PNG/JPG, 5 MB max)</label><input name="hospital_photo" type="file" accept="image/png,image/jpeg"></div>
+               <div class="row" style="align-items:center">
+                 <label class="row small"><input name="emergency_services" type="checkbox" ${h.emergency_services ? "checked" : ""}> Emergency</label>
+                 <label class="row small"><input name="opd_available" type="checkbox" ${h.opd_available ? "checked" : ""}> OPD Open</label>
+                 <label class="row small"><input name="ipd_available" type="checkbox" ${h.ipd_available ? "checked" : ""}> IPD Open</label>
+               </div>
+               <div style="grid-column:1 / -1"><button class="btn btn-primary">Save hospital profile</button></div>
+             </form>
+           </section>`;
+      $("#hospitalProfileForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        const list = v => String(v || "").split(",").map(x => x.trim()).filter(Boolean);
+        try {
+          await api("/api/hospital/profile", {
+            method: "PUT",
+            body: JSON.stringify({
+              name: f.get("name"), phone: f.get("phone"), address: f.get("address"), area: f.get("area"), city: f.get("city"),
+              opd_timings: f.get("opd_timings"), specialties: list(f.get("specialties")), facilities: list(f.get("facilities")),
+              latitude: f.get("latitude") || null, longitude: f.get("longitude") || null,
+              emergency_services: f.has("emergency_services"), opd_available: f.has("opd_available"), ipd_available: f.has("ipd_available"),
+            }),
+          });
+          const photo = f.get("hospital_photo");
+          if (photo && photo.size) { const up = new FormData(); up.append("file", photo); await api("/api/hospital/photo", { method: "POST", body: up }); }
+          toast("Hospital profile updated."); navigate("profile");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function renderHospitalDoctors(root) {
+      const docs = state.hospitalData.doctors || [];
+      const schedules = state.hospitalData.schedules || [];
+      root.innerHTML = pageHeader("Provider Directory", t("doctors"), "Manage doctors, live availability, consultation fees, and weekly/date OPD slot schedules.",
+        `<button id="addDoctorBtn" class="btn btn-primary">+ Add doctor</button>`)
+        + `<div class="grid grid-2">${docs.length ? docs.map(d => doctorCard(d, true)).join("") : `<div class="empty">No doctors listed yet.</div>`}</div>
+           <div id="doctorFormHost"></div>
+           <div class="section-title"><h2>Configured OPD Schedules</h2></div>
+           <div class="card table-wrap">${schedules.length ? `<table>
+             <thead><tr><th>Doctor</th><th>Day / Specific Date</th><th>Window</th><th>Slot Length</th><th>Max Slots</th><th>Status</th><th>Action</th></tr></thead>
+             <tbody>${schedules.map(s => `<tr>
+               <td>${esc(s.doctor_name)}</td>
+               <td>${s.specific_date ? `Override: ${formatDate(s.specific_date)}` : WEEKDAYS[s.day_of_week]}</td>
+               <td class="mono">${esc(s.start_time)} – ${esc(s.end_time)}</td>
+               <td class="mono">${s.slot_duration_minutes} min</td>
+               <td class="mono">${s.max_slots}</td>
+               <td><span class="${s.is_available ? "state-ok" : "state-bad"}">${s.is_available ? "Active" : "Blocked"}</span></td>
+               <td><button class="btn btn-danger btn-small" data-del-sched="${s.id}">Delete</button></td>
+             </tr>`).join("")}</tbody></table>` : `<div class="empty">No OPD schedules configured yet. Click "OPD Schedule" on a doctor card to add slots.</div>`}</div>`;
+
+      $("#addDoctorBtn").onclick = () => hospitalDoctorForm();
+      root.onchange = async e => {
+        const sel = e.target.closest("[data-status-doctor]"); if (!sel) return;
+        try { await api(`/api/hospital/doctors/${sel.dataset.statusDoctor}`, { method: "PUT", body: JSON.stringify({ availability: sel.value }) }); toast(`Availability updated to ${sel.value}.`); navigate("doctors"); }
+        catch (err) { toast(err.message); }
+      };
+      root.onclick = async e => {
+        const edit = e.target.closest("[data-edit-doctor]");
+        if (edit) { const d = docs.find(x => String(x.id) === edit.dataset.editDoctor); if (d) hospitalDoctorForm(d); return; }
+        const sched = e.target.closest("[data-sched-doctor]");
+        if (sched) { const d = docs.find(x => String(x.id) === sched.dataset.schedDoctor); if (d) openHospitalScheduleModal(d); return; }
+        const del = e.target.closest("[data-delete-doctor]");
+        if (del) {
+          confirmModal("Remove doctor", "Remove this doctor from your hospital directory?", async () => {
+            try { await api(`/api/hospital/doctors/${del.dataset.deleteDoctor}`, { method: "DELETE" }); toast("Doctor removed."); navigate("doctors"); }
+            catch (err) { toast(err.message); }
+          }, "Remove");
+          return;
+        }
+        const delSched = e.target.closest("[data-del-sched]");
+        if (delSched) {
+          try { await api(`/api/hospital/schedules/${delSched.dataset.delSched}`, { method: "DELETE" }); toast("Schedule removed."); navigate("doctors"); }
+          catch (err) { toast(err.message); }
+        }
+      };
+    }
+
+    function hospitalDoctorForm(doc = null) {
+      const host = $("#doctorFormHost");
+      host.innerHTML = `<section class="card" style="margin-top:16px">
+        <h2>${doc ? "Edit doctor" : "Add doctor"}</h2>
+        <form id="hospDocFormEl" class="grid grid-3">
+          <div class="field"><label>Full name</label><input name="name" required value="${esc(doc?.name || "")}"></div>
+          <div class="field"><label>Specialty</label><input name="specialty" required value="${esc(doc?.specialty || "")}" placeholder="e.g. Cardiologist"></div>
+          <div class="field"><label>Department</label><input name="department" value="${esc(doc?.department || "")}" placeholder="e.g. Cardiology"></div>
+          <div class="field"><label>Qualification</label><input name="qualification" value="${esc(doc?.qualification || "")}"></div>
+          <div class="field"><label>Experience (years)</label><input name="experience_years" type="number" min="0" max="80" value="${doc?.experience_years ?? 0}"></div>
+          <div class="field"><label>Consultation Fee (₹)</label><input name="consultation_fee" type="number" min="0" value="${doc?.consultation_fee ?? 500}"></div>
+          <div class="field"><label>Consultation Timings</label><input name="consultation_timings" value="${esc(doc?.consultation_timings || "")}" placeholder="Mon–Sat 09:00–13:00"></div>
+          <div class="field"><label>Languages (comma-separated)</label><input name="languages" value="${esc((doc?.languages || ["English"]).join(", "))}"></div>
+          <div class="field"><label>Availability</label><select name="availability">${["Available", "Busy", "On Break", "Unavailable"].map(s => `<option ${doc?.availability === s ? "selected" : !doc && s === "Unavailable" ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+          <div class="field"><label>Doctor Photo (PNG/JPG)</label><input name="photo" type="file" accept="image/png,image/jpeg"></div>
+          <div class="row" style="grid-column:span 2;align-items:flex-end;padding-bottom:10px">
+            <button class="btn btn-primary">${doc ? "Save changes" : "Add doctor"}</button>
+            <button type="button" class="btn btn-light" id="closeDocFormBtn">Cancel</button>
+          </div>
+        </form>
+      </section>`;
+      $("#closeDocFormBtn").onclick = () => host.innerHTML = "";
+      $("#hospDocFormEl").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        const payload = {
+          name: f.get("name"), specialty: f.get("specialty"), department: f.get("department"),
+          qualification: f.get("qualification"), experience_years: f.get("experience_years"),
+          consultation_fee: f.get("consultation_fee"), consultation_timings: f.get("consultation_timings"),
+          languages: String(f.get("languages") || "").split(",").map(x => x.trim()).filter(Boolean),
+          availability: f.get("availability"), opd_available: true,
+        };
+        try {
+          const res = await api(doc ? `/api/hospital/doctors/${doc.id}` : "/api/hospital/doctors", { method: doc ? "PUT" : "POST", body: JSON.stringify(payload) });
+          const photo = f.get("photo");
+          if (photo && photo.size) { const up = new FormData(); up.append("file", photo); await api(`/api/hospital/doctors/${doc ? doc.id : res.id}/photo`, { method: "POST", body: up }); }
+          toast(doc ? "Doctor updated." : "Doctor added."); navigate("doctors");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function openHospitalScheduleModal(doc) {
+      openModal(`
+        <span class="kicker">OPD Schedule Editor</span>
+        <h2>${esc(doc.name)}</h2>
+        <form id="hospSchedForm">
+          <div class="grid grid-2">
+            <div class="field"><label>Weekday (weekly recurring)</label><select name="day_of_week">${WEEKDAYS.map((w, i) => `<option value="${i}">${w}</option>`).join("")}</select></div>
+            <div class="field"><label>OR Specific Date Override (optional)</label><input name="specific_date" type="date" min="${localDateString()}"></div>
+            <div class="field"><label>Start Time</label><input name="start_time" type="time" value="09:00" required></div>
+            <div class="field"><label>End Time</label><input name="end_time" type="time" value="13:00" required></div>
+            <div class="field"><label>Slot Duration (minutes)</label><input name="slot_duration_minutes" type="number" min="10" max="120" value="30" required></div>
+            <div class="field"><label>Max Slots</label><input name="max_slots" type="number" min="1" max="60" value="8" required></div>
+          </div>
+          <label class="row small" style="margin:8px 0 14px"><input name="is_available" type="checkbox" checked> Available for OPD booking (uncheck to block this date/day)</label>
+          <button class="btn btn-primary btn-block" type="submit">Save OPD schedule</button>
+        </form>
+      `);
+      $("#hospSchedForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        try {
+          await api(`/api/hospital/doctors/${doc.id}/schedules`, {
+            method: "POST",
+            body: JSON.stringify({
+              day_of_week: Number(f.get("day_of_week")),
+              specific_date: f.get("specific_date") || "",
+              start_time: f.get("start_time"),
+              end_time: f.get("end_time"),
+              slot_duration_minutes: Number(f.get("slot_duration_minutes")),
+              max_slots: Number(f.get("max_slots")),
+              is_available: f.has("is_available"),
+            }),
+          });
+          closeModal(); toast("OPD schedule saved."); navigate("doctors");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function renderHospitalRequests(root) {
+      const items = state.hospitalData.appointments || [];
+      root.innerHTML = pageHeader("OPD Appointment Queue", t("requests"), "Confirm, complete, reschedule, or reject patient OPD requests.")
+        + `<div class="card">${items.length ? `<div class="table-wrap"><table>
+            <thead><tr><th>ID</th><th>Patient</th><th>Doctor</th><th>Date &amp; Time</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>${items.map(a => `<tr>
+              <td class="code-text">${esc(a.appointment_code || `#${a.id}`)}</td>
+              <td>${esc(a.patient_name)}<br><span class="small muted">${esc(a.patient_phone || "")}</span></td>
+              <td>${esc(a.doctor_name)}<br><span class="small muted">${esc(a.department || a.specialty)}</span></td>
+              <td class="mono">${formatDate(a.appointment_date)} · ${esc(a.appointment_time)}</td>
+              <td><span class="${stateClass(a.status)}">${esc(formatStatusLabel(a.status))}</span></td>
+              <td class="row">
+                ${a.status === "pending" ? `<button class="btn btn-teal btn-small" data-ha="confirmed" data-id="${a.id}">Confirm</button><button class="btn btn-danger btn-small" data-ha="rejected" data-id="${a.id}">Reject</button>` : ""}
+                ${["confirmed", "accepted", "rescheduled"].includes(a.status) ? `<button class="btn btn-primary btn-small" data-ha="completed" data-id="${a.id}">Complete</button>` : ""}
+                ${["pending", "confirmed", "accepted", "rescheduled"].includes(a.status) ? `<button class="btn btn-light btn-small" data-ha="rescheduled" data-id="${a.id}">Reschedule</button>` : "—"}
+              </td>
+            </tr>`).join("")}</tbody></table></div>` : `<div class="empty">No OPD appointment requests yet.</div>`}</div>`;
+
+      root.onclick = async e => {
+        const btn = e.target.closest("[data-ha]"); if (!btn) return;
+        const status = btn.dataset.ha, id = btn.dataset.id;
+        if (status === "rescheduled") {
+          const item = items.find(x => String(x.id) === id);
+          openModal(`<span class="kicker">Reschedule</span><h2>${esc(item.patient_name)}</h2><form id="reschForm"><div class="field"><label>New Date</label><input id="rDate" type="date" min="${localDateString()}" value="${esc(item.appointment_date)}" required></div><div class="field"><label>New Time</label><input id="rTime" type="time" value="${esc(item.appointment_time)}" required></div><button class="btn btn-primary btn-block">Save reschedule</button></form>`);
+          $("#reschForm").addEventListener("submit", async ev => {
+            ev.preventDefault();
+            try { await api(`/api/hospital/appointments/${id}`, { method: "PATCH", body: JSON.stringify({ status: "rescheduled", date: $("#rDate").value, time: $("#rTime").value }) }); closeModal(); toast("Rescheduled."); navigate("requests"); }
+            catch (err) { toast(err.message); }
+          });
+          return;
+        }
+        try { await api(`/api/hospital/appointments/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }); toast(`Appointment marked ${status}.`); navigate("requests"); }
+        catch (err) { toast(err.message); }
+      };
+    }
+
+    function renderHospitalIpd(root) {
+      const beds = state.hospitalData.beds || [];
+      const admissions = state.hospitalData.admissions || [];
+      const byType = Object.fromEntries(beds.map(b => [b.bed_type, b]));
+
+      root.innerHTML = pageHeader("IPD Management", "IPD Beds & Admission Requests", "Update General, Private, and ICU bed counts and process inpatient admission requests.")
+        + `<section class="card">
+             <h2>Update IPD Bed Inventory</h2>
+             <form id="hospBedsForm" class="stack" style="margin-top:12px">
+               <div class="grid grid-3">
+                 ${["General", "Private", "ICU"].map(type => {
+                   const b = byType[type] || { total_beds: 0, available_beds: 0, daily_charge: 0 };
+                   return `<div class="bed-col">
+                     <strong>${type} Beds</strong>
+                     <div class="field"><label>Total Beds</label><input name="${type}_total" type="number" min="0" value="${b.total_beds}" required></div>
+                     <div class="field"><label>Available Beds</label><input name="${type}_avail" type="number" min="0" value="${b.available_beds}" required></div>
+                     <div class="field"><label>Daily Charge (₹)</label><input name="${type}_charge" type="number" min="0" value="${b.daily_charge}" required></div>
+                   </div>`;
+                 }).join("")}
+               </div>
+               <div><button class="btn btn-primary" type="submit">Save IPD bed inventory</button></div>
+             </form>
+           </section>
+           <div class="section-title"><h2>Incoming IPD Admission Requests</h2></div>
+           <div class="card table-wrap">${admissions.length ? `<table>
+             <thead><tr><th>Code</th><th>Patient</th><th>Bed</th><th>Reason</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+             <tbody>${admissions.map(r => `<tr>
+               <td class="code-text">${esc(r.request_code || `#${r.id}`)}</td>
+               <td>${esc(r.patient_name)}<br><span class="small muted">${esc(r.patient_phone || r.patient_email)}</span></td>
+               <td>${esc(r.bed_type)}</td>
+               <td>${esc(r.disease_or_reason)}</td>
+               <td class="mono">${formatDate(r.preferred_date)}</td>
+               <td><span class="${stateClass(r.status)}">${esc(r.status)}</span></td>
+               <td class="row">
+                 ${r.status === "Pending" ? `<button class="btn btn-teal btn-small" data-adm-act="Approved" data-id="${r.id}">Approve</button><button class="btn btn-danger btn-small" data-adm-act="Rejected" data-id="${r.id}">Reject</button>` : ""}
+                 ${r.status === "Approved" ? `<button class="btn btn-light btn-small" data-adm-act="Discharged" data-id="${r.id}">Discharge</button>` : ""}
+               </td>
+             </tr>`).join("")}</tbody></table>` : `<div class="empty">No IPD admission requests yet.</div>`}</div>`;
+
+      $("#hospBedsForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        const payload = {
+          beds: ["General", "Private", "ICU"].map(t => ({
+            bed_type: t,
+            total_beds: Number(f.get(`${t}_total`)),
+            available_beds: Number(f.get(`${t}_avail`)),
+            daily_charge: Number(f.get(`${t}_charge`)),
+          })),
+        };
+        try { await api("/api/hospital/beds", { method: "PUT", body: JSON.stringify(payload) }); toast("IPD beds updated."); navigate("ipd"); }
+        catch (err) { toast(err.message); }
+      });
+
+      root.addEventListener("click", async e => {
+        const btn = e.target.closest("[data-adm-act]"); if (!btn) return;
+        try {
+          await api(`/api/ipd/admissions/${btn.dataset.id}`, { method: "PATCH", body: JSON.stringify({ status: btn.dataset.admAct }) });
+          toast(`Admission marked ${btn.dataset.admAct}.`);
+          navigate("ipd");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function startHospitalPolling() {
+      state.updateTimer = setInterval(async () => {
+        if (state.user?.role !== "hospital") return;
+        try { state.hospitalData = await api("/api/hospital/dashboard"); } catch (_e) {}
+      }, 20000);
+    }
+
+    /* =====================================================================
+       ADMIN WORKSPACE (Requirement 5 — Full Hospital, Doctor, Schedule, Appt & IPD Management)
+       ===================================================================== */
+
+    function renderAdminOverview(root) {
+      const s = state.adminData.stats;
+      root.innerHTML = pageHeader("Platform Administration", t("dashboard"), "Manage hospitals, doctors, OPD schedules, appointments, IPD beds, admission requests, and user accounts.")
+        + `<div class="grid grid-4">
+             ${stat(s.hospitals, "Hospitals")}
+             ${stat(s.doctors, "Doctors")}
+             ${stat(s.appointments, "Total OPD appointments")}
+             ${stat(s.available_ipd_beds, "Available IPD beds")}
+             ${stat(s.pending_appointments, "Pending appointments")}
+             ${stat(s.accepted_appointments, "Confirmed appointments")}
+             ${stat(s.pending_admissions, "Pending IPD admissions")}
+             ${stat(s.open_reports, "Open reports")}
+           </div>
+           <div class="section-title"><h2>Quick Management Actions</h2></div>
+           <div class="grid grid-4">
+             <button class="card" style="text-align:left" data-go="verification"><h3>Hospitals</h3><p class="small muted">Add, edit &amp; verify hospitals</p></button>
+             <button class="card" style="text-align:left" data-go="doctors"><h3>Doctors &amp; Schedules</h3><p class="small muted">Add, assign &amp; schedule OPD</p></button>
+             <button class="card" style="text-align:left" data-go="appointments"><h3>Appointments</h3><p class="small muted">View &amp; update bookings</p></button>
+             <button class="card" style="text-align:left" data-go="ipd"><h3>IPD &amp; Admissions</h3><p class="small muted">Manage beds &amp; approve IPD</p></button>
+           </div>
+           <div class="section-title"><h2>Recent Platform Activity</h2></div>
+           <div class="card divider-list">${state.adminData.activity.length ? state.adminData.activity.slice(0, 8).map(a => `<div class="row-between small"><span>${esc(a.event)}</span><span class="muted">${esc(a.full_name || "System")} · ${formatDate(a.created_at)}</span></div>`).join("") : `<div class="empty">No activity recorded yet.</div>`}</div>`;
+      bindPageActions(root);
+    }
+
+    function renderAdminHospitals(root) {
+      const hospitals = state.adminData.hospitals || [];
+      root.innerHTML = pageHeader("Hospital Management", "Hospitals & Verification", "Add hospitals, update hospital profiles, and control verification status.",
+        `<button id="adminAddHospitalBtn" class="btn btn-primary">+ Add hospital</button>`)
+        + `<div class="card table-wrap"><table>
+            <thead><tr><th>Hospital</th><th>Location</th><th>OPD / IPD</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>${hospitals.map(h => `<tr>
+              <td><strong>${esc(h.name)}</strong>${h.is_sample ? `<br><span class="demo-label">DEMO DATA</span>` : ""}<br><span class="small muted">${esc(h.phone || "")}</span></td>
+              <td>${esc(h.city || "—")}<br><span class="small muted">${esc(h.address || "")}</span></td>
+              <td class="small">OPD: ${h.opd_available ? "Open" : "Closed"}<br>IPD: ${h.ipd_available ? "Open" : "Closed"}</td>
+              <td><span class="${h.verified ? "state-ok" : "state-warn"}">${h.verified ? "Verified" : "Pending"}</span></td>
+              <td class="row">
+                <button class="btn btn-light btn-small" data-edit-hosp="${h.id}">Edit</button>
+                <button class="btn ${h.verified ? "btn-light" : "btn-teal"} btn-small" data-verify="${h.id}" data-next="${!h.verified}">${h.verified ? "Revoke" : "Verify"}</button>
+              </td>
+            </tr>`).join("")}</tbody></table></div>
+           <div id="adminHospitalFormHost"></div>`;
+
+      $("#adminAddHospitalBtn").onclick = () => openAdminHospitalForm();
+      root.onclick = async e => {
+        const edit = e.target.closest("[data-edit-hosp]");
+        if (edit) { const h = hospitals.find(x => String(x.id) === edit.dataset.editHosp); if (h) openAdminHospitalForm(h); return; }
+        const ver = e.target.closest("[data-verify]");
+        if (ver) {
+          try { await api(`/api/admin/hospitals/${ver.dataset.verify}`, { method: "PATCH", body: JSON.stringify({ verified: ver.dataset.next === "true" }) }); toast("Verification updated."); navigate("verification"); }
+          catch (err) { toast(err.message); }
+        }
+      };
+    }
+
+    function openAdminHospitalForm(hosp = null) {
+      const host = $("#adminHospitalFormHost");
+      host.innerHTML = `<section class="card" style="margin-top:16px">
+        <h2>${hosp ? `Edit Hospital: ${esc(hosp.name)}` : "Add New Hospital"}</h2>
+        <form id="adminHospFormEl" class="grid grid-3">
+          <div class="field"><label>Hospital Name</label><input name="name" required value="${esc(hosp?.name || "")}"></div>
+          <div class="field"><label>City</label><input name="city" value="${esc(hosp?.city || "")}" placeholder="e.g. Hassan"></div>
+          <div class="field"><label>Area</label><input name="area" value="${esc(hosp?.area || "")}"></div>
+          <div class="field" style="grid-column:span 2"><label>Address</label><input name="address" value="${esc(hosp?.address || "")}"></div>
+          <div class="field"><label>Phone</label><input name="phone" value="${esc(hosp?.phone || "")}"></div>
+          <div class="field"><label>Specialties (comma-separated)</label><input name="specialties" value="${esc((hosp?.specialties || []).join(", "))}"></div>
+          <div class="field"><label>Facilities (comma-separated)</label><input name="facilities" value="${esc((hosp?.facilities || []).join(", "))}"></div>
+          <div class="field"><label>OPD Timings</label><input name="opd_timings" value="${esc(hosp?.opd_timings || "")}" placeholder="Mon–Sat 09:00–17:00"></div>
+          <div class="field"><label>Latitude (optional)</label><input name="latitude" type="number" step="any" value="${hosp?.latitude ?? ""}"></div>
+          <div class="field"><label>Longitude (optional)</label><input name="longitude" type="number" step="any" value="${hosp?.longitude ?? ""}"></div>
+          ${!hosp ? `
+            <div class="field"><label>Staff Name (optional login)</label><input name="staff_name" placeholder="Leave blank if admin-managed"></div>
+            <div class="field"><label>Staff Email (optional)</label><input name="email" type="email"></div>
+            <div class="field"><label>Staff Password (10+ chars)</label><input name="password" type="password" minlength="10"></div>
+          ` : ""}
+          <div class="row" style="grid-column:1 / -1">
+            <label class="row small"><input name="verified" type="checkbox" ${hosp ? (hosp.verified ? "checked" : "") : "checked"}> Verified</label>
+            <label class="row small"><input name="opd_available" type="checkbox" ${hosp ? (hosp.opd_available ? "checked" : "") : "checked"}> OPD Open</label>
+            <label class="row small"><input name="ipd_available" type="checkbox" ${hosp ? (hosp.ipd_available ? "checked" : "") : "checked"}> IPD Open</label>
+            <label class="row small"><input name="emergency_services" type="checkbox" ${hosp?.emergency_services ? "checked" : ""}> Emergency</label>
+          </div>
+          <div class="row" style="grid-column:1 / -1">
+            <button class="btn btn-primary" type="submit">${hosp ? "Update hospital" : "Create hospital"}</button>
+            <button class="btn btn-light" type="button" id="closeAdminHospBtn">Cancel</button>
+          </div>
+        </form>
+      </section>`;
+      $("#closeAdminHospBtn").onclick = () => host.innerHTML = "";
+      $("#adminHospFormEl").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        const payload = {
+          name: f.get("name"), city: f.get("city"), area: f.get("area"), address: f.get("address"),
+          phone: f.get("phone"), specialties: f.get("specialties"), facilities: f.get("facilities"),
+          opd_timings: f.get("opd_timings"),
+          latitude: f.get("latitude") || null, longitude: f.get("longitude") || null,
+          verified: f.has("verified"), opd_available: f.has("opd_available"),
+          ipd_available: f.has("ipd_available"), emergency_services: f.has("emergency_services"),
+        };
+        if (!hosp && f.get("email")) {
+          payload.staff_name = f.get("staff_name"); payload.email = f.get("email"); payload.password = f.get("password");
+        }
+        try {
+          await api(hosp ? `/api/admin/hospitals/${hosp.id}` : "/api/admin/hospitals", { method: hosp ? "PUT" : "POST", body: JSON.stringify(payload) });
+          toast(hosp ? "Hospital updated." : "Hospital added."); navigate("verification");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function renderAdminDoctors(root) {
+      const hospitals = state.adminData.hospitals || [];
+      const docs = state.adminData.doctors || [];
+      const schedules = state.adminData.schedules || [];
+      const uniqueDocs = [...new Map(docs.map(d => [d.id, d])).values()];
+
+      root.innerHTML = pageHeader("Doctor & OPD Schedule Control", "Doctors, Specializations & OPD Schedules",
+        "Add doctors, update profiles and availability, assign doctors to particular hospitals, and configure OPD schedules.",
+        `<button id="adminAddDocBtn" class="btn btn-primary">+ Add doctor</button><button id="adminAssignDocBtn" class="btn btn-teal">Assign to hospital</button>`)
+        + `<div id="adminDocFormHost"></div>
+           <div class="card table-wrap" style="margin-top:14px"><table>
+             <thead><tr><th>Doctor</th><th>Hospital</th><th>Specialty / Dept</th><th>Fee</th><th>Availability</th><th>Actions</th></tr></thead>
+             <tbody>${docs.map(d => `<tr>
+               <td><strong>${esc(d.name)}</strong>${d.is_sample ? `<br><span class="demo-label">DEMO</span>` : ""}<br><span class="small muted">${esc(d.qualification || "")}</span></td>
+               <td>${esc(d.hospital_name)}</td>
+               <td>${esc(d.specialty)}<br><span class="small muted">${esc((d.specializations || []).join(", "))}</span></td>
+               <td class="mono">${esc(formatFee(d.consultation_fee))}</td>
+               <td>
+                 <select data-admin-doc-avail="${d.id}" data-hosp="${d.hospital_id}" style="padding:5px 8px;border:1px solid var(--line-strong);border-radius:7px">
+                   ${["Available", "Busy", "On Break", "Unavailable"].map(st => `<option ${d.availability === st ? "selected" : ""}>${st}</option>`).join("")}
+                 </select>
+               </td>
+               <td class="row">
+                 <button class="btn btn-light btn-small" data-admin-edit-doc="${d.id}" data-hosp="${d.hospital_id}">Edit</button>
+                 <button class="btn btn-teal btn-small" data-admin-sched-doc="${d.id}" data-hosp="${d.hospital_id}">OPD Schedule</button>
+               </td>
+             </tr>`).join("")}</tbody></table></div>
+           <div class="section-title"><h2>All OPD Schedules (${schedules.length})</h2></div>
+           <div class="card table-wrap">${schedules.length ? `<table>
+             <thead><tr><th>Hospital</th><th>Doctor</th><th>Day / Specific Date</th><th>Window</th><th>Slot</th><th>Max</th><th>Status</th><th>Action</th></tr></thead>
+             <tbody>${schedules.slice(0, 80).map(s => `<tr>
+               <td>${esc(s.hospital_name)}</td><td>${esc(s.doctor_name)}</td>
+               <td>${s.specific_date ? `Override: ${formatDate(s.specific_date)}` : WEEKDAYS[s.day_of_week]}</td>
+               <td class="mono">${esc(s.start_time)} – ${esc(s.end_time)}</td>
+               <td class="mono">${s.slot_duration_minutes}m</td><td class="mono">${s.max_slots}</td>
+               <td><span class="${s.is_available ? "state-ok" : "state-bad"}">${s.is_available ? "Active" : "Blocked"}</span></td>
+               <td><button class="btn btn-danger btn-small" data-admin-del-sched="${s.id}">Delete</button></td>
+             </tr>`).join("")}</tbody></table>` : `<div class="empty">No schedules configured.</div>`}</div>`;
+
+      $("#adminAddDocBtn").onclick = () => showAdminDoctorForm(null, hospitals);
+      $("#adminAssignDocBtn").onclick = () => showAssignDoctorModal(uniqueDocs, hospitals);
+
+      root.onchange = async e => {
+        const sel = e.target.closest("[data-admin-doc-avail]"); if (!sel) return;
+        try {
+          await api(`/api/admin/doctors/${sel.dataset.adminDocAvail}`, {
+            method: "PUT",
+            body: JSON.stringify({ hospital_id: Number(sel.dataset.hosp), availability: sel.value }),
+          });
+          toast(`Doctor availability updated to ${sel.value}.`);
+          navigate("doctors");
+        } catch (err) { toast(err.message); }
+      };
+
+      root.onclick = async e => {
+        const edit = e.target.closest("[data-admin-edit-doc]");
+        if (edit) {
+          const d = docs.find(x => String(x.id) === edit.dataset.adminEditDoc && String(x.hospital_id) === edit.dataset.hosp);
+          if (d) showAdminDoctorForm(d, hospitals);
+          return;
+        }
+        const sched = e.target.closest("[data-admin-sched-doc]");
+        if (sched) {
+          const d = docs.find(x => String(x.id) === sched.dataset.adminSchedDoc && String(x.hospital_id) === sched.dataset.hosp);
+          if (d) openAdminScheduleModal(d);
+          return;
+        }
+        const del = e.target.closest("[data-admin-del-sched]");
+        if (del) {
+          try { await api(`/api/admin/schedules/${del.dataset.adminDelSched}`, { method: "DELETE" }); toast("Schedule deleted."); navigate("doctors"); }
+          catch (err) { toast(err.message); }
+        }
+      };
+    }
+
+    function showAdminDoctorForm(doc, hospitals) {
+      const host = $("#adminDocFormHost");
+      host.innerHTML = `<section class="card">
+        <h2>${doc ? `Edit Doctor: ${esc(doc.name)}` : "Add New Doctor"}</h2>
+        <form id="adminDocFormEl" class="grid grid-3">
+          <div class="field"><label>Hospital</label><select name="hospital_id" required>${hospitals.map(h => `<option value="${h.id}" ${doc?.hospital_id === h.id ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>
+          <div class="field"><label>Doctor Full Name</label><input name="name" required value="${esc(doc?.name || "")}"></div>
+          <div class="field"><label>Primary Specialty</label><input name="specialty" required value="${esc(doc?.specialty || "")}" placeholder="e.g. Cardiologist"></div>
+          <div class="field"><label>All Specializations (comma-separated)</label><input name="specializations" value="${esc((doc?.specializations || []).join(", "))}" placeholder="Cardiologist, Interventional Cardiology"></div>
+          <div class="field"><label>Department</label><input name="department" value="${esc(doc?.department || "")}" placeholder="Cardiology"></div>
+          <div class="field"><label>Qualification</label><input name="qualification" value="${esc(doc?.qualification || "")}" placeholder="MBBS, MD"></div>
+          <div class="field"><label>Experience (years)</label><input name="experience_years" type="number" min="0" max="80" value="${doc?.experience_years ?? 5}"></div>
+          <div class="field"><label>Consultation Fee (₹)</label><input name="consultation_fee" type="number" min="0" value="${doc?.consultation_fee ?? 500}"></div>
+          <div class="field"><label>Availability</label><select name="availability">${["Available", "Busy", "On Break", "Unavailable"].map(s => `<option ${doc?.availability === s ? "selected" : !doc && s === "Available" ? "selected" : ""}>${s}</option>`).join("")}</select></div>
+          <div class="field" style="grid-column:span 2"><label>OPD Timings Summary</label><input name="consultation_timings" value="${esc(doc?.consultation_timings || "")}" placeholder="Mon–Sat 09:00–13:00"></div>
+          <div class="field"><label>Languages</label><input name="languages" value="${esc((doc?.languages || ["English", "Kannada"]).join(", "))}"></div>
+          <div class="row" style="grid-column:1 / -1">
+            <label class="row small"><input name="opd_available" type="checkbox" ${doc ? (doc.opd_available ? "checked" : "") : "checked"}> OPD Booking Enabled</label>
+            <button class="btn btn-primary" type="submit">${doc ? "Save doctor" : "Add doctor"}</button>
+            <button class="btn btn-light" type="button" id="closeAdminDocBtn">Cancel</button>
+          </div>
+        </form>
+      </section>`;
+      $("#closeAdminDocBtn").onclick = () => host.innerHTML = "";
+      $("#adminDocFormEl").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        const payload = {
+          hospital_id: Number(f.get("hospital_id")),
+          name: f.get("name"), specialty: f.get("specialty"), specializations: f.get("specializations"),
+          department: f.get("department"), qualification: f.get("qualification"),
+          experience_years: Number(f.get("experience_years")), consultation_fee: Number(f.get("consultation_fee")),
+          availability: f.get("availability"), consultation_timings: f.get("consultation_timings"),
+          languages: f.get("languages"), opd_available: f.has("opd_available"),
+        };
+        try {
+          await api(doc ? `/api/admin/doctors/${doc.id}` : "/api/admin/doctors", { method: doc ? "PUT" : "POST", body: JSON.stringify(payload) });
+          toast(doc ? "Doctor updated." : "Doctor added."); navigate("doctors");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function showAssignDoctorModal(doctors, hospitals) {
+      openModal(`
+        <span class="kicker">Hospital Assignment</span>
+        <h2>Assign Doctor to Particular Hospital</h2>
+        <form id="assignDocForm">
+          <div class="field"><label>Doctor</label><select name="doctor_id" required>${doctors.map(d => `<option value="${d.id}">${esc(d.name)} (${esc(d.specialty)})</option>`).join("")}</select></div>
+          <div class="field"><label>Target Hospital</label><select name="hospital_id" required>${hospitals.map(h => `<option value="${h.id}">${esc(h.name)}</option>`).join("")}</select></div>
+          <div class="grid grid-2">
+            <div class="field"><label>Department</label><input name="department" placeholder="e.g. Cardiology"></div>
+            <div class="field"><label>Consultation Fee (₹)</label><input name="consultation_fee" type="number" min="0" value="500"></div>
+          </div>
+          <div class="field"><label>Availability at this Hospital</label><select name="availability"><option>Available</option><option>Busy</option><option>On Break</option><option>Unavailable</option></select></div>
+          <button class="btn btn-primary btn-block" type="submit">Assign doctor</button>
+        </form>
+      `);
+      $("#assignDocForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        try {
+          await api("/api/admin/hospital-doctors", {
+            method: "POST",
+            body: JSON.stringify({
+              doctor_id: Number(f.get("doctor_id")),
+              hospital_id: Number(f.get("hospital_id")),
+              department: f.get("department"),
+              consultation_fee: Number(f.get("consultation_fee")),
+              availability: f.get("availability"),
+              opd_available: true,
+            }),
+          });
+          closeModal(); toast("Doctor assigned to hospital."); navigate("doctors");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function openAdminScheduleModal(doc) {
+      openModal(`
+        <span class="kicker">Admin OPD Schedule</span>
+        <h2>${esc(doc.name)} · ${esc(doc.hospital_name)}</h2>
+        <form id="adminSchedForm">
+          <div class="grid grid-2">
+            <div class="field"><label>Weekday</label><select name="day_of_week">${WEEKDAYS.map((w, i) => `<option value="${i}">${w}</option>`).join("")}</select></div>
+            <div class="field"><label>OR Specific Date Override</label><input name="specific_date" type="date" min="${localDateString()}"></div>
+            <div class="field"><label>Start Time</label><input name="start_time" type="time" value="09:00" required></div>
+            <div class="field"><label>End Time</label><input name="end_time" type="time" value="13:00" required></div>
+            <div class="field"><label>Slot Duration (min)</label><input name="slot_duration_minutes" type="number" min="10" max="120" value="30" required></div>
+            <div class="field"><label>Max Slots</label><input name="max_slots" type="number" min="1" max="60" value="8" required></div>
+          </div>
+          <label class="row small" style="margin:8px 0 14px"><input name="is_available" type="checkbox" checked> Available (uncheck to block this date/weekday)</label>
+          <button class="btn btn-primary btn-block" type="submit">Save OPD schedule</button>
+        </form>
+      `);
+      $("#adminSchedForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        try {
+          await api(`/api/admin/doctors/${doc.id}/schedules`, {
+            method: "POST",
+            body: JSON.stringify({
+              hospital_id: doc.hospital_id,
+              day_of_week: Number(f.get("day_of_week")),
+              specific_date: f.get("specific_date") || "",
+              start_time: f.get("start_time"),
+              end_time: f.get("end_time"),
+              slot_duration_minutes: Number(f.get("slot_duration_minutes")),
+              max_slots: Number(f.get("max_slots")),
+              is_available: f.has("is_available"),
+            }),
+          });
+          closeModal(); toast("OPD schedule saved."); navigate("doctors");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function renderAdminAppointments(root) {
+      const items = state.adminData.appointments || [];
+      root.innerHTML = pageHeader("Patient Appointment Records", "All OPD Appointments", "Review patient bookings across all hospitals and update appointment status.")
+        + `<div class="card table-wrap">${items.length ? `<table>
+            <thead><tr><th>Appointment ID</th><th>Patient</th><th>Hospital</th><th>Doctor</th><th>Date &amp; Time</th><th>Status</th><th>Update Status</th></tr></thead>
+            <tbody>${items.map(a => `<tr>
+              <td class="code-text">${esc(a.appointment_code || `#${a.id}`)}</td>
+              <td><strong>${esc(a.patient_name)}</strong><br><span class="small muted">${esc(a.patient_email)}</span></td>
+              <td>${esc(a.hospital_name)}</td>
+              <td>${esc(a.doctor_name)}<br><span class="small muted">${esc(a.department || a.specialty)}</span></td>
+              <td class="mono">${formatDate(a.appointment_date)} · ${esc(a.appointment_time)}</td>
+              <td><span class="${stateClass(a.status)}">${esc(formatStatusLabel(a.status))}</span></td>
+              <td>
+                <select data-admin-appt-status="${a.id}" style="padding:5px 8px;border:1px solid var(--line-strong);border-radius:7px">
+                  ${["pending", "confirmed", "completed", "cancelled", "rejected"].map(st => `<option value="${st}" ${a.status === st ? "selected" : ""}>${formatStatusLabel(st)}</option>`).join("")}
+                </select>
+              </td>
+            </tr>`).join("")}</tbody></table>` : `<div class="empty">No appointments recorded yet.</div>`}</div>`;
+
+      root.onchange = async e => {
+        const sel = e.target.closest("[data-admin-appt-status]"); if (!sel) return;
+        try { await api(`/api/admin/appointments/${sel.dataset.adminApptStatus}`, { method: "PATCH", body: JSON.stringify({ status: sel.value }) }); toast(`Appointment marked ${sel.value}.`); navigate("appointments"); }
+        catch (err) { toast(err.message); }
+      };
+    }
+
+    function renderAdminIpd(root) {
+      const hospitals = state.adminData.hospitals || [];
+      const beds = state.adminData.ipd_beds || [];
+      const admissions = state.adminData.admissions || [];
+
+      root.innerHTML = pageHeader("IPD Bed & Admission Control", "IPD Beds & Admission Requests", "Update General, Private, and ICU bed counts for any hospital and approve or reject patient admission requests.")
+        + `<section class="card">
+             <h2>Set / Update Hospital IPD Beds</h2>
+             <form id="adminBedForm" class="grid grid-4" style="margin-top:10px;align-items:end">
+               <div class="field" style="margin:0"><label>Hospital</label><select name="hospital_id" required>${hospitals.map(h => `<option value="${h.id}">${esc(h.name)}</option>`).join("")}</select></div>
+               <div class="field" style="margin:0"><label>Bed Type</label><select name="bed_type"><option>General</option><option>Private</option><option>ICU</option></select></div>
+               <div class="field" style="margin:0"><label>Total Beds</label><input name="total_beds" type="number" min="0" value="20" required></div>
+               <div class="field" style="margin:0"><label>Available Beds</label><input name="available_beds" type="number" min="0" value="10" required></div>
+               <div class="field" style="margin:0"><label>Daily Charge (₹)</label><input name="daily_charge" type="number" min="0" value="1000" required></div>
+               <div style="grid-column:span 3"><button class="btn btn-primary" type="submit">Save IPD bed count</button></div>
+             </form>
+           </section>
+           <div class="section-title"><h2>Current IPD Bed Inventory</h2></div>
+           <div class="card table-wrap">${beds.length ? `<table>
+             <thead><tr><th>Hospital</th><th>Bed Type</th><th>Available / Total</th><th>Daily Charge</th><th>Type</th></tr></thead>
+             <tbody>${beds.map(b => `<tr>
+               <td>${esc(b.hospital_name)}</td><td><strong>${esc(b.bed_type)}</strong></td>
+               <td class="mono"><span class="${b.available_beds > 0 ? "state-ok" : "state-bad"}">${b.available_beds}</span> / ${b.total_beds}</td>
+               <td class="mono">₹${Number(b.daily_charge).toLocaleString()}</td>
+               <td>${b.is_sample ? `<span class="demo-label">DEMO DATA</span>` : "Reported"}</td>
+             </tr>`).join("")}</tbody></table>` : `<div class="empty">No IPD bed records yet.</div>`}</div>
+           <div class="section-title"><h2>IPD Admission Requests (${admissions.length})</h2></div>
+           <div class="card table-wrap">${admissions.length ? `<table>
+             <thead><tr><th>Code</th><th>Patient</th><th>Hospital</th><th>Bed</th><th>Reason</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+             <tbody>${admissions.map(r => `<tr>
+               <td class="code-text">${esc(r.request_code || `#${r.id}`)}</td>
+               <td>${esc(r.patient_name)}<br><span class="small muted">${esc(r.patient_email)}</span></td>
+               <td>${esc(r.hospital_name)}</td>
+               <td>${esc(r.bed_type)}</td>
+               <td>${esc(r.disease_or_reason)}</td>
+               <td class="mono">${formatDate(r.preferred_date)}</td>
+               <td><span class="${stateClass(r.status)}">${esc(r.status)}</span></td>
+               <td class="row">
+                 ${r.status === "Pending" ? `<button class="btn btn-teal btn-small" data-admin-adm="Approved" data-id="${r.id}">Approve</button><button class="btn btn-danger btn-small" data-admin-adm="Rejected" data-id="${r.id}">Reject</button>` : ""}
+                 ${r.status === "Approved" ? `<button class="btn btn-light btn-small" data-admin-adm="Discharged" data-id="${r.id}">Discharge</button>` : ""}
+               </td>
+             </tr>`).join("")}</tbody></table>` : `<div class="empty">No IPD admission requests submitted.</div>`}</div>`;
+
+      $("#adminBedForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        try {
+          await api("/api/admin/ipd/beds", {
+            method: "PUT",
+            body: JSON.stringify({
+              hospital_id: Number(f.get("hospital_id")),
+              bed_type: f.get("bed_type"),
+              total_beds: Number(f.get("total_beds")),
+              available_beds: Number(f.get("available_beds")),
+              daily_charge: Number(f.get("daily_charge")),
+            }),
+          });
+          toast("IPD bed inventory updated."); navigate("ipd");
+        } catch (err) { toast(err.message); }
+      });
+
+      root.addEventListener("click", async e => {
+        const btn = e.target.closest("[data-admin-adm]"); if (!btn) return;
+        try {
+          await api(`/api/ipd/admissions/${btn.dataset.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: btn.dataset.adminAdm, admin_note: `Reviewed by admin (${btn.dataset.adminAdm})` }),
+          });
+          toast(`Admission request ${btn.dataset.adminAdm}.`); navigate("ipd");
+        } catch (err) { toast(err.message); }
+      });
+    }
+
+    function renderAdminUsers(root) {
+      root.innerHTML = pageHeader("Access Management", t("users"), "Enable or disable user accounts.")
+        + `<div class="card table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Created</th><th>Status</th><th>Action</th></tr></thead><tbody>${state.adminData.users.map(u => `<tr><td>${esc(u.full_name)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td><td>${formatDate(u.created_at)}</td><td>${u.active ? "Active" : "Disabled"}</td><td>${u.role === "admin" ? "Protected" : `<button class="btn ${u.active ? "btn-danger" : "btn-teal"} btn-small" data-account="${u.id}" data-next="${!u.active}">${u.active ? "Disable" : "Enable"}</button>`}</td></tr>`).join("")}</tbody></table></div>`;
+      root.onclick = e => {
+        const btn = e.target.closest("[data-account]"); if (!btn) return;
+        const next = btn.dataset.next === "true";
+        confirmModal(next ? "Enable account" : "Disable account", `Are you sure you want to ${next ? "enable" : "disable"} this account?`, async () => {
+          try { await api(`/api/admin/users/${btn.dataset.account}`, { method: "PATCH", body: JSON.stringify({ active: next }) }); toast("Account updated."); navigate("users"); }
+          catch (err) { toast(err.message); }
+        }, next ? "Enable" : "Disable");
+      };
+    }
+
+    function renderAdminReports(root) {
+      root.innerHTML = pageHeader("Information Quality", t("reports"), "Review patient-submitted reports and mark them resolved.")
+        + `<div class="card table-wrap"><table><thead><tr><th>Reported by</th><th>Hospital</th><th>Details</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead><tbody>${state.adminData.reports.length ? state.adminData.reports.map(r => `<tr><td>${esc(r.patient_name)}</td><td>${esc(r.hospital_name || "General")}</td><td>${esc(r.message)}</td><td>${formatDate(r.created_at)}</td><td>${esc(r.status)}</td><td>${r.status === "open" ? `<button class="btn btn-teal btn-small" data-resolve="${r.id}">Resolve</button>` : "—"}</td></tr>`).join("") : `<tr><td colspan="6" class="muted">No reports submitted.</td></tr>`}</tbody></table></div>`;
+      root.onclick = async e => {
+        const btn = e.target.closest("[data-resolve]"); if (!btn) return;
+        try { await api(`/api/admin/reports/${btn.dataset.resolve}`, { method: "PATCH", body: JSON.stringify({ status: "resolved" }) }); toast("Report resolved."); navigate("reports"); }
+        catch (err) { toast(err.message); }
+      };
+    }
+
+    applyAccessibility();
+    toggleAuth(false);
+    checkSession();
+  })();
+  </script>
+</body>
+</html>
